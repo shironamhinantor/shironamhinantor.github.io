@@ -4,6 +4,7 @@
 <title>Antor · Digital ID</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <meta name="theme-color" content="#05060f">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Hind+Siliguri:wght@400;600;700&display=swap">
 <link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-180.png">
@@ -269,16 +270,29 @@ const OWNER_EMAIL="shironamhinantor@gmail.com"; // <-- এখানে আপন
 const OWNER_MSG=()=>B("Owner only sign in — শুধু মালিক সাইন-ইন করতে পারবেন","Owner only sign in");
 const isOwner=u=>!!u&&u.emailVerified!==false&&(u.email||"").toLowerCase()===OWNER_EMAIL.toLowerCase();
 function AS(u){if(u&&!isOwner(u))au.signOut().catch(()=>{});}
+const GCID=""; // <-- এখানে Web client ID বসান (xxxx.apps.googleusercontent.com)
+const gisToken=()=>new Promise((res,rej)=>{
+ if(!window.google||!google.accounts||!google.accounts.oauth2)return rej(new Error(B("Google সাইন-ইন লোড হয়নি — ইন্টারনেট চেক করুন","Google sign-in failed to load — check internet")));
+ const c=google.accounts.oauth2.initTokenClient({client_id:GCID,scope:"openid email profile",prompt:"select_account",
+  callback:r=>r.error?rej(new Error(r.error_description||r.error)):res(r.access_token),
+  error_callback:e=>{const t=e&&e.type;rej(new Error(t==="popup_closed"?B("সাইন-ইন বাতিল হয়েছে","Sign-in cancelled"):t==="popup_failed_to_open"?B("পপআপ ব্লক হয়েছে — অনুমতি দিন","Popup blocked — allow popups"):"Sign-in error: "+(t||"unknown")))}});
+ c.requestAccessToken()});
 async function login(){
- 
  if(au.authStateReady)await au.authStateReady();
  if(isOwner(au.currentUser))return;
- const pv=new firebase.auth.GoogleAuthProvider();pv.setCustomParameters({prompt:"select_account"});
  let r;
- try{r=await au.signInWithPopup(pv)}catch(e){
-  if(e.code==="auth/popup-blocked"||e.code==="auth/operation-not-supported-in-this-environment"){au.signInWithRedirect(pv);throw new Error(B("গুগল সাইন-ইন পেজে নেওয়া হচ্ছে…","Redirecting to Google sign-in…"))}
-  if(e.code==="auth/popup-closed-by-user"||e.code==="auth/cancelled-popup-request")throw new Error(B("সাইন-ইন বাতিল হয়েছে","Sign-in cancelled"));
-  throw e}
+ if(GCID){
+  const tok=await gisToken();
+  r=await au.signInWithCredential(firebase.auth.GoogleAuthProvider.credential(null,tok));
+ }else{
+  const pv=new firebase.auth.GoogleAuthProvider();pv.setCustomParameters({prompt:"select_account"});
+  const mob=/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)||matchMedia("(display-mode: standalone)").matches;
+  if(mob){au.signInWithRedirect(pv);throw new Error(B("গুগল সাইন-ইন পেজে নেওয়া হচ্ছে…","Redirecting to Google sign-in…"))}
+  try{r=await au.signInWithPopup(pv)}catch(e){
+   if(e.code==="auth/popup-blocked"||e.code==="auth/operation-not-supported-in-this-environment"){au.signInWithRedirect(pv);throw new Error(B("গুগল সাইন-ইন পেজে নেওয়া হচ্ছে…","Redirecting to Google sign-in…"))}
+   if(e.code==="auth/popup-closed-by-user"||e.code==="auth/cancelled-popup-request")throw new Error(B("সাইন-ইন বাতিল হয়েছে","Sign-in cancelled"));
+   throw e}
+ }
  if(!isOwner(r.user)){await au.signOut();throw new Error(OWNER_MSG())}
 }
 const save=async()=>{vault.it=await seal(key,IT);await persist()};
