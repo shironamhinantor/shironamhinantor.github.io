@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="bn"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Antor · Digital ID</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<meta name="theme-color" content="#05060f">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Hind+Siliguri:wght@400;600;700&display=swap">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-180.png">
+<style>
+:root{--bg:#eef1ff;--tx:#0b1030;--mut:#5b6290;--card:rgba(255,255,255,.72);--bd:rgba(30,40,120,.14);--ac:#5b5bff;--ac2:#00b8ff;--bar:rgba(255,255,255,.8);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#05060f;--tx:#eef1ff;--mut:#9aa3d6;--card:rgba(255,255,255,.06);--bd:rgba(255,255,255,.13);--bar:rgba(12,14,34,.78)}}
+:root[data-theme="dark"]{--bg:#05060f;--tx:#eef1ff;--mut:#9aa3d6;--card:rgba(255,255,255,.06);--bd:rgba(255,255,255,.13);--bar:rgba(12,14,34,.78)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:-apple-system,"SF Pro Text","Segoe UI","Noto Sans Bengali","Hind Siliguri",system-ui,sans-serif;min-height:100vh;padding-bottom:96px;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;background:radial-gradient(500px 360px at 10% -5%,rgba(91,91,255,.35),transparent),radial-gradient(420px 320px at 100% 20%,rgba(0,184,255,.25),transparent),radial-gradient(400px 300px at 30% 100%,rgba(190,70,255,.2),transparent);z-index:-1}
+main{max-width:640px;margin:0 auto;padding:14px 16px}
+.glass{background:var(--card);border:1px solid var(--bd);border-radius:24px;backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);padding:18px;margin-bottom:14px;box-shadow:0 10px 40px rgba(0,0,0,.12)}
+h1{font-size:26px;margin:0 0 2px;letter-spacing:-.4px}h2{font-size:13px;text-transform:uppercase;letter-spacing:1.4px;color:var(--mut);margin:0 0 12px}
+p{margin:4px 0;color:var(--mut);line-height:1.5}
+.hero{display:flex;gap:16px;align-items:center}
+.av{width:78px;height:78px;border-radius:26px;background:linear-gradient(135deg,var(--ac),var(--ac2));display:grid;place-items:center;font-size:28px;font-weight:700;color:#fff;box-shadow:0 0 34px rgba(91,91,255,.55);flex:none}
+.pill{display:inline-block;font-size:12px;padding:4px 10px;border-radius:99px;background:rgba(91,91,255,.16);color:var(--ac);margin-top:6px;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;text-align:center}
+.app{background:none;border:0;color:var(--tx);font:inherit;font-size:12px;cursor:pointer;padding:0}
+.ic{width:100%;aspect-ratio:1;max-width:68px;margin:0 auto 6px;border-radius:22%;display:grid;place-items:center;font-size:28px;box-shadow:0 8px 20px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.35)}
+.row{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd);align-items:center}.row:last-child{border:0}
+.row b{font-weight:600}.row span{color:var(--mut);font-size:14px;text-align:right}
+.btn{border:0;border-radius:14px;padding:12px 16px;font:inherit;font-weight:600;color:#fff;background:linear-gradient(135deg,var(--ac),var(--ac2));cursor:pointer;text-decoration:none;display:inline-block}
+.btn.g{background:var(--card);color:var(--tx);border:1px solid var(--bd)}.btn.r{background:#e5484d}.btn.s{padding:8px 12px;font-size:13px;border-radius:11px}
+input[type=password]{width:100%;padding:14px;border-radius:14px;border:1px solid var(--bd);background:var(--card);color:var(--tx);font:inherit;font-size:16px;margin:8px 0}
+.tabs{position:fixed;left:12px;right:12px;bottom:0;margin:0 auto;max-width:520px;display:flex;justify-content:space-around;padding:10px 8px calc(10px + env(safe-area-inset-bottom,0px));background:var(--bar);border:1px solid var(--bd);border-radius:26px 26px 0 0;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);z-index:20}
+.tabs button{background:none;border:0;color:var(--mut);font:inherit;font-size:11px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:4px 10px}
+.tabs button i{font-style:normal;font-size:22px}.tabs button.on{color:var(--ac)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:10}
+.lock{text-align:center;padding:26px 10px}.lock .big{font-size:54px;filter:drop-shadow(0 0 18px var(--ac))}
+.err{color:#e5484d;font-size:14px;min-height:20px}
+.file{display:flex;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--bd)}.file:last-child{border:0}
+.file .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}.file small{display:block;color:var(--mut);font-weight:400}
+.acts{display:flex;gap:6px;flex-wrap:wrap}
+dialog{border:1px solid var(--bd);border-radius:22px;background:var(--bg);color:var(--tx);width:min(94vw,640px);padding:14px}dialog::backdrop{background:rgba(0,0,0,.6)}
+dialog img,dialog iframe{width:100%;border:0;border-radius:12px;max-height:70vh}dialog iframe{height:70vh}
+.lang{display:flex;gap:6px;justify-content:flex-end;margin-bottom:8px}
+body{font-family:"Sora","Hind Siliguri",-apple-system,"Segoe UI","Noto Sans Bengali",system-ui,sans-serif}
+body::before{animation:drift 12s ease-in-out infinite alternate;background:radial-gradient(520px 380px at 8% -5%,rgba(91,91,255,.55),transparent),radial-gradient(460px 340px at 100% 18%,rgba(0,184,255,.4),transparent),radial-gradient(440px 320px at 25% 100%,rgba(192,75,255,.38),transparent)}
+body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.55;background-image:linear-gradient(var(--bd) 1px,transparent 1px),linear-gradient(90deg,var(--bd) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(circle at 50% 0,#000,transparent 72%);mask-image:radial-gradient(circle at 50% 0,#000,transparent 72%)}
+@keyframes drift{to{transform:translate3d(0,-34px,0) scale(1.12)}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes up{from{opacity:0;transform:translateY(16px)}}
+.glass{border-radius:30px;position:relative;overflow:hidden;animation:up .55s both;box-shadow:0 18px 50px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.2)}
+.glass::before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.16),transparent 42%);pointer-events:none}
+.glass:nth-child(2){animation-delay:.07s}.glass:nth-child(3){animation-delay:.14s}.glass:nth-child(4){animation-delay:.21s}
+.grad{background:linear-gradient(90deg,var(--tx),var(--ac) 55%,var(--ac2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero.big{flex-direction:column;text-align:center;padding:34px 18px 28px}.hi{letter-spacing:3px;text-transform:uppercase;font-size:12px}
+.ring{position:relative;width:104px;height:104px;border-radius:36px;display:grid;place-items:center;overflow:hidden;box-shadow:0 0 50px rgba(91,91,255,.55)}
+.ring::before{content:"";position:absolute;inset:-50%;background:conic-gradient(#5b5bff,#00b8ff,#c04bff,#5b5bff);animation:spin 5s linear infinite}
+.ring .av{position:relative;width:96px;height:96px;border-radius:32px;background:#0b0e24;box-shadow:none;font-size:32px;letter-spacing:1px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}.two .glass{margin:0}.wid{text-align:center;padding:20px 10px}
+#clk{font-size:32px;font-weight:700;letter-spacing:-1px}#dt,#vs{font-size:12px;color:var(--mut);margin-top:4px}.st{font-size:32px}
+.ic{max-width:74px;border-radius:24%;transition:transform .15s;box-shadow:0 12px 28px rgba(60,60,200,.4),inset 0 1px 0 rgba(255,255,255,.45)}.app:active .ic{transform:scale(.88)}
+.ic svg{width:46%;fill:none;stroke:#fff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tabs{left:14px;right:14px;bottom:calc(10px + env(safe-area-inset-bottom,0px));padding:8px;border-radius:32px;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.tabs button{flex:1;border-radius:24px;padding:9px 4px;transition:.2s}.tabs svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tabs button.on{color:var(--tx);background:linear-gradient(135deg,rgba(91,91,255,.32),rgba(0,184,255,.22));box-shadow:inset 0 0 0 1px var(--bd),0 0 24px rgba(91,91,255,.45)}
+.btn{box-shadow:0 8px 22px rgba(91,91,255,.35)}.btn.g,.btn.r{box-shadow:none}
+body::before{background:radial-gradient(520px 380px at 8% -5%,color-mix(in srgb,var(--ac) 55%,transparent),transparent),radial-gradient(460px 340px at 100% 18%,color-mix(in srgb,var(--ac2) 42%,transparent),transparent),radial-gradient(440px 320px at 25% 100%,rgba(192,75,255,.36),transparent)}
+.ring::before{background:conic-gradient(var(--ac),var(--ac2),#c04bff,var(--ac))}.av{overflow:hidden}
+.hero.big::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;background:linear-gradient(120deg,var(--ac),transparent 30%,var(--ac2) 60%,transparent 80%,var(--ac));background-size:300% 300%;animation:flow 6s linear infinite;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}@keyframes flow{to{background-position:300% 0}}
+.tl{position:relative;padding-left:24px}.tl::before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:2px;border-radius:2px;background:linear-gradient(var(--ac),var(--ac2))}
+.ti{position:relative;margin-bottom:20px}.ti:last-child{margin:0}.ti::before{content:"";position:absolute;left:-24px;top:5px;width:12px;height:12px;border-radius:50%;background:var(--ac2);box-shadow:0 0 16px var(--ac2)}.ti small{color:var(--ac2);font-weight:600}.ti .btn{margin-top:8px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}.chips span{padding:7px 14px;border-radius:99px;font-size:13px;font-weight:600;background:linear-gradient(135deg,rgba(91,91,255,.24),rgba(0,184,255,.16));border:1px solid var(--bd)}
+.fl{display:block;font-size:12px;color:var(--mut);margin-bottom:10px}.fl input,.fl textarea{display:block;width:100%;margin-top:5px;padding:12px;border-radius:13px;border:1px solid var(--bd);background:var(--card);color:var(--tx);font:inherit;font-size:15px}
+.eb{padding:12px;border:1px dashed var(--bd);border-radius:18px;margin-bottom:12px}
+.sw{display:flex;gap:12px}.sw button{width:44px;height:44px;border-radius:15px;border:2px solid var(--bd);cursor:pointer}
+.hero.big .btn{position:relative;z-index:1}
+.cg{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.cc{background:var(--card);border:1px solid var(--bd);border-radius:24px;padding:18px 10px;color:var(--tx);font:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;transition:.2s}.cc:active{transform:scale(.95)}.cc small{color:var(--ac2);font-weight:700}
+.cg{grid-template-columns:repeat(3,1fr);gap:10px}.cc{padding:14px 4px}.cc b{font-size:12px;text-align:center}
+.file:has(+.xr){border:0;padding-bottom:4px}.xr{display:flex;gap:10px;align-items:center;justify-content:space-between;font-size:12px;color:var(--mut);padding:2px 0 12px;border-bottom:1px solid var(--bd)}.xr input{background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:10px;padding:6px 8px;font:inherit;font-size:12px}
+.bg{padding:4px 10px;border-radius:99px;background:rgba(0,214,143,.18);color:#00d68f;font-size:12px}.bg.r{background:rgba(229,72,77,.18);color:#ff6369}
+.warn{padding:12px 14px;border-radius:16px;background:rgba(255,159,69,.15);border:1px solid rgba(255,159,69,.4);margin-bottom:12px;font-size:13px;line-height:1.7}
+.chips a{padding:7px 14px;border-radius:99px;font-size:13px;font-weight:600;background:linear-gradient(135deg,rgba(91,91,255,.24),rgba(0,184,255,.16));border:1px solid var(--bd);color:var(--tx);text-decoration:none}
+.sos{border-color:rgba(229,72,77,.5);box-shadow:0 0 40px rgba(229,72,77,.2)}
+.qr{background:#fff;padding:14px;border-radius:22px;max-width:280px;margin:0 auto 12px}.qr svg{width:100%;height:auto;display:block}
+.shb{position:relative;overflow:hidden;width:100%;display:flex;align-items:center;gap:14px;padding:14px 16px;border:0;border-radius:22px;color:#fff;font:inherit;font-weight:700;font-size:16px;cursor:pointer;background:linear-gradient(135deg,var(--ac),var(--ac2));box-shadow:0 12px 34px color-mix(in srgb,var(--ac) 55%,transparent);transition:transform .15s}.shb:active{transform:scale(.97)}
+.shb i{width:46px;height:46px;border-radius:16px;display:grid;place-items:center;background:rgba(255,255,255,.22);box-shadow:inset 0 1px 0 rgba(255,255,255,.5);flex:none}
+.shb svg{width:26px;height:26px;fill:none;stroke:#fff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.shb span{flex:1;text-align:left}.shb em{font-style:normal;font-size:28px;opacity:.85}
+.shb::after{content:"";position:absolute;top:0;bottom:0;width:60px;left:-90px;background:linear-gradient(100deg,transparent,rgba(255,255,255,.45),transparent);transform:skewX(-20deg);animation:shine 3.2s ease-in-out infinite}@keyframes shine{to{left:120%}}
+.ei{display:inline-flex;vertical-align:-.2em}.ei svg{width:1.15em;height:1.15em;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.ic{color:#fff}.big{color:var(--ac)}.big .ei svg{stroke-width:1.3}
+h2::before{content:"";display:inline-block;width:18px;height:3px;border-radius:2px;background:linear-gradient(90deg,var(--ac),var(--ac2));margin-right:9px;vertical-align:middle}
+.grad{background-image:linear-gradient(90deg,var(--tx),var(--ac),var(--ac2),var(--ac),var(--tx));background-size:200% auto;animation:flow2 7s linear infinite}@keyframes flow2{to{background-position:200% center}}
+.ring{animation:pulse 3.5s ease-in-out infinite}@keyframes pulse{50%{box-shadow:0 0 75px color-mix(in srgb,var(--ac2) 70%,transparent)}}
+main::before{content:"";position:fixed;width:280px;height:280px;border-radius:50%;right:-90px;top:38%;background:radial-gradient(circle,color-mix(in srgb,var(--ac2) 45%,transparent),transparent 70%);filter:blur(24px);z-index:-1;pointer-events:none;animation:float 9s ease-in-out infinite alternate}@keyframes float{to{transform:translate(-50px,70px)}}
+.btn{transition:transform .15s,box-shadow .2s}.btn:active{transform:scale(.95)}
+.file{transition:background .2s}
+</style></head>
+<body>
+<main id="app"></main>
+<nav class="tabs" id="tabs"></nav>
+<dialog id="dlg"></dialog>
+<script type="application/json" id="vault">{}</script>
+<script>
+const $=s=>document.querySelector(s),enc=new TextEncoder(),dec=new TextDecoder();
+const T={
+en:{name:"K.M. Mehedi Hasan Antor",role:"Student · Digital Profile",home:"Home",profile:"Profile",docs:"Documents",set:"Settings",contact:"Contact",
+about:"About",edu:"Education",loc:"Location",locv:"Lohagara, Narail, Bangladesh",deg:"BA / BSS (Social Sciences / Arts)",uni:"Bangladesh Open University",ctr:"Abdul Hai Degree College, Narail Center",since:"Since Oct 2025",
+aboutv:"Welcome to my digital ID. My profile is public; my personal documents are encrypted and open only with my password.",
+phone:"Phone",email:"Email",call:"Call",mail:"Email",
+secure:"Secure Vault",setup:"Create a vault password",setup2:"Choose a strong password. If you forget it, documents can't be recovered.",unl:"Enter password to unlock",unlock:"Unlock",create:"Create vault",pw:"Password",pw2:"Repeat password",
+wrong:"Wrong password",short:"Use at least 8 characters",nomatch:"Passwords don't match",add:"+ Add documents",view:"View",dl:"Download",del:"Delete",lockn:"Lock",empty:"No documents yet. Add your NID, certificates, passport copy…",
+confirm:"Delete this document?",lang:"Language",theme:"Theme",exp:"Export my site (with encrypted vault)",expd:"Download a single HTML file with your encrypted documents inside. Upload it to free hosting (Netlify, GitHub Pages) and open it from any device.",
+auto:"Auto-locks after 2 minutes of inactivity",enc:"AES-256 encrypted on your device",quick:"Quick access",busy:"Working…",close:"Close",notice:"Documents are stored encrypted in this browser. To open them on another device, export the site and host it."},
+bn:{name:"কে.এম. মেহেদী হাসান অন্তর",role:"শিক্ষার্থী · ডিজিটাল প্রোফাইল",home:"হোম",profile:"প্রোফাইল",docs:"ডকুমেন্ট",set:"সেটিংস",contact:"যোগাযোগ",
+about:"পরিচিতি",edu:"শিক্ষা",loc:"ঠিকানা",locv:"লোহাগড়া, নড়াইল, বাংলাদেশ",deg:"বিএ / বিএসএস (সমাজবিজ্ঞান / কলা)",uni:"বাংলাদেশ উন্মুক্ত বিশ্ববিদ্যালয়",ctr:"আব্দুল হাই ডিগ্রি কলেজ, নড়াইল কেন্দ্র",since:"অক্টোবর ২০২৫ থেকে",
+aboutv:"আমার ডিজিটাল আইডিতে স্বাগতম। প্রোফাইল সবার জন্য উন্মুক্ত; ব্যক্তিগত ডকুমেন্ট এনক্রিপ্টেড, শুধু আমার পাসওয়ার্ড দিয়ে খোলা যায়।",
+phone:"ফোন",email:"ইমেইল",call:"কল",mail:"ইমেইল",
+secure:"সিকিউর ভল্ট",setup:"ভল্টের পাসওয়ার্ড তৈরি করুন",setup2:"শক্তিশালী পাসওয়ার্ড দিন। ভুলে গেলে ডকুমেন্ট উদ্ধার করা যাবে না।",unl:"খুলতে পাসওয়ার্ড দিন",unlock:"আনলক",create:"ভল্ট তৈরি করুন",pw:"পাসওয়ার্ড",pw2:"আবার পাসওয়ার্ড",
+wrong:"ভুল পাসওয়ার্ড",short:"কমপক্ষে ৮ অক্ষর দিন",nomatch:"পাসওয়ার্ড মেলেনি",add:"+ ডকুমেন্ট যোগ করুন",view:"দেখুন",dl:"ডাউনলোড",del:"মুছুন",lockn:"লক",empty:"এখনো কোনো ডকুমেন্ট নেই। NID, সনদ, পাসপোর্ট কপি যোগ করুন…",
+confirm:"এই ডকুমেন্ট মুছবেন?",lang:"ভাষা",theme:"থিম",exp:"আমার সাইট এক্সপোর্ট (এনক্রিপ্টেড ভল্টসহ)",expd:"আপনার এনক্রিপ্টেড ডকুমেন্টসহ একটি HTML ফাইল নামান। ফ্রি হোস্টিংয়ে (Netlify, GitHub Pages) আপলোড করলে যেকোনো ডিভাইস থেকে খোলা যাবে।",
+auto:"২ মিনিট কিছু না করলে অটো-লক",enc:"আপনার ডিভাইসেই AES-256 এনক্রিপ্টেড",quick:"কুইক অ্যাক্সেস",busy:"কাজ চলছে…",close:"বন্ধ",notice:"ডকুমেন্ট এই ব্রাউজারে এনক্রিপ্টেড অবস্থায় থাকে। অন্য ডিভাইসে খুলতে সাইট এক্সপোর্ট করে হোস্ট করুন।"}};
+Object.assign(T.en,{editp:"Edit profile",owner:"Owner",photo:"Photo",fname:"Full name",frole:"Headline",skills:"Skills (comma separated)",ldeg:"Degree / Exam",inst:"Institution",per:"Period (e.g. 2020 – 2024)",attach:"Attach certificate (locked)",replace:"Replace certificate",adde:"+ Add education",save:"Save",cancel:"Cancel",cert:"Certificate",accent:"Accent color"});
+Object.assign(T.bn,{editp:"প্রোফাইল এডিট",owner:"মালিক",photo:"ছবি",fname:"পূর্ণ নাম",frole:"পরিচিতি লাইন",skills:"দক্ষতা (কমা দিয়ে)",ldeg:"ডিগ্রি / পরীক্ষা",inst:"প্রতিষ্ঠান",per:"সময়কাল (যেমন ২০২০ – ২০২৪)",attach:"সনদ যুক্ত করুন (লক থাকবে)",replace:"সনদ বদলান",adde:"+ শিক্ষা যোগ করুন",save:"সেভ",cancel:"বাতিল",cert:"সনদ",accent:"অ্যাকসেন্ট রঙ"});
+let L="bn",tab="home",key=null,files=[],vault=null,msg="",busy=false,timer,editing=false,pend=null;
+try{L=localStorage.getItem("l")||"bn"}catch(e){}
+const t=k=>{const m={name:"name",role:"role",aboutv:"about",locv:"loc"},v=pr()[m[k]];return v?esc(v):T[L][k]},esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+/* crypto */
+const b64=u=>{u=new Uint8Array(u);let s="";for(let i=0;i<u.length;i+=8192)s+=String.fromCharCode.apply(null,u.subarray(i,i+8192));return btoa(s)};
+const unb=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function derive(pw,salt){const m=await crypto.subtle.importKey("raw",enc.encode(pw),"PBKDF2",false,["deriveKey"]);return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:250000,hash:"SHA-256"},m,{name:"AES-GCM",length:256},false,["encrypt","decrypt"])}
+async function seal(k,o){const iv=crypto.getRandomValues(new Uint8Array(12));return{iv:b64(iv),ct:b64(await crypto.subtle.encrypt({name:"AES-GCM",iv},k,enc.encode(JSON.stringify(o))))}}
+async function open(k,o){return JSON.parse(dec.decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:unb(o.iv)},k,unb(o.ct))))}
+/* storage */
+const idb=()=>new Promise((r,j)=>{const q=indexedDB.open("antor",1);q.onupgradeneeded=()=>q.result.createObjectStore("s");q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error)});
+async function dbGet(){try{const d=await idb();return await new Promise(r=>{const q=d.transaction("s").objectStore("s").get("v");q.onsuccess=()=>r(q.result);q.onerror=()=>r(null)})}catch(e){return null}}
+async function dbSet(v){try{const d=await idb();d.transaction("s","readwrite").objectStore("s").put(v,"v")}catch(e){}}
+const persist=()=>{vault.files=files.map(f=>f.s);return dbSet(vault)};
+/* vault ops */
+async function create(pw){const salt=crypto.getRandomValues(new Uint8Array(16));key=await derive(pw,salt);vault={salt:b64(salt),check:await seal(key,{ok:1}),files:[]};files=[];await persist()}
+async function unlock(pw){const k=await derive(pw,unb(vault.salt));await open(k,vault.check);const out=[];for(const s of vault.files)out.push({s,d:await open(k,s)});key=k;files=out;IT=vault.it?await open(k,vault.it):[];QS=vault.qs?await open(k,vault.qs):[]}
+function lock(){key=null;files=[];IT=[];QS=[];clearTimeout(timer);render()}
+function touch(){clearTimeout(timer);if(key)timer=setTimeout(lock,LK)}
+async function addFiles(list){busy=true;render();for(const f of list){const d={n:f.name,t:f.type||"application/octet-stream",z:f.size,b:b64(await f.arrayBuffer()),k:cat};files.push({d,s:await seal(key,d)})}await persist();busy=false;touch();render()}
+const blobOf=f=>new Blob([unb(f.d.b)],{type:f.d.t});
+async function download(f){const bl=blobOf(f);try{const d=window.claude&&await claude.use("downloads");if(d){await d.save({filename:f.d.n,data:bl});return}}catch(e){}const a=document.createElement("a");a.href=URL.createObjectURL(bl);a.download=f.d.n;document.body.appendChild(a);a.click();a.remove()}
+let LP;function preview(f){LP=f;const bl=blobOf(f),u=URL.createObjectURL(bl);let h="";
+if(f.d.t.startsWith("image/"))h=`<img src="${u}" alt="">`;else if(f.d.t==="application/pdf")h=`<iframe src="${u}"></iframe>`;else h=`<p>${esc(f.d.n)}</p>`;
+const d=$("#dlg");d.innerHTML=`<div class="acts" style="justify-content:space-between;margin-bottom:10px"><b>${esc(f.d.n)}</b><span><button class="btn g s" data-a="dlp">⬇</button> <button class="btn g s" data-a="close">${t("close")}</button></span></div>${h}`;d.showModal()}
+async function exportSite(){if(!vault)return;const c=document.documentElement.cloneNode(true);c.querySelector("#vault").textContent=JSON.stringify(vault);c.querySelector("#app").innerHTML="";c.querySelector("#tabs").innerHTML="";c.querySelector("#dlg").innerHTML="";c.querySelector("#dlg").removeAttribute("open");
+const html="<!DOCTYPE html>\n"+c.outerHTML,bl=new Blob([html],{type:"text/html"});
+try{const d=window.claude&&await claude.use("downloads");if(d){await d.save({filename:"antor-digital-id.html",data:bl});return}}catch(e){}
+const a=document.createElement("a");a.href=URL.createObjectURL(bl);a.download="antor-digital-id.html";document.body.appendChild(a);a.click();a.remove()}
+/* views */
+const row=(a,b)=>`<div class="row"><b>${a}</b><span>${b}</span></div>`;
+const S=p=>`<svg viewBox="0 0 24 24">${p}</svg>`;const SV={home:S('<path d="M4 11l8-7 8 7v9a1 1 0 01-1 1h-4v-6H9v6H5a1 1 0 01-1-1z"/>'),profile:S('<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>'),docs:S('<rect x="5" y="11" width="14" height="10" rx="3"/><path d="M8 11V8a4 4 0 018 0v3"/>'),contact:S('<path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z"/>'),set:S('<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>')};
+const tile=(k,ic,bg)=>`<button class="app" data-tab="${k}"><div class="ic" style="background:${bg}">${SV[k]}</div>${t(k==="contact"?"contact":k)}</button>`;
+const V={
+home:()=>`<div class="glass hero big"><div class="ring"><div class="av">AN</div></div><div><p class="hi">${L==="bn"?"স্বাগতম":"Welcome"}</p><h1 class="grad">${t("name")}</h1><p>${t("role")}</p><span class="pill">🔒 ${t("enc")}</span></div></div><div class="two"><div class="glass wid"><div id="clk">--:--</div><div id="dt"></div></div><div class="glass wid"><div class="st">${key?"🔓":"🔒"}</div><div id="vs">${vault?(key?t("secure")+" · "+files.length:t("secure")):t("setup")}</div></div></div>
+<div class="glass"><h2>${t("quick")}</h2><div class="grid">${tile("profile","👤","linear-gradient(135deg,#5b5bff,#8d6bff)")}${tile("docs","🔐","linear-gradient(135deg,#00c2a8,#00b8ff)")}${tile("contact","📞","linear-gradient(135deg,#ff7a45,#ff3d71)")}${tile("set","⚙️","linear-gradient(135deg,#6b7280,#374151)")}</div></div>
+<div class="glass"><h2>${t("about")}</h2><p>${t("aboutv")}</p></div>`,
+profile:()=>`<div class="glass hero"><div class="av">AN</div><div><h1>${t("name")}</h1><p>${t("role")}</p></div></div>
+<div class="glass"><h2>${t("about")}</h2><p>${t("aboutv")}</p></div>
+<div class="glass"><h2>${t("edu")}</h2>${row(t("deg"),t("since"))}${row(t("uni"),"")}${row(t("ctr"),"")}</div>
+<div class="glass"><h2>${t("loc")}</h2><p>📍 ${t("locv")}</p></div>${V.contact()}`,
+contact:()=>`<div class="glass"><h2>${t("contact")}</h2>${row(t("phone"),"+880 1765-329128")}${row(t("email"),"shironamhinantor@gmail.com")}<div class="acts" style="margin-top:12px"><a class="btn" href="tel:+8801765329128">📞 ${t("call")}</a><a class="btn g" href="mailto:shironamhinantor@gmail.com">✉️ ${t("mail")}</a></div></div>`,
+docs:()=>{
+if(!vault)return`<div class="glass lock"><div class="big">🛡️</div><h1>${t("setup")}</h1><p>${t("setup2")}</p><input id="p1" type="password" placeholder="${t("pw")}" autocomplete="new-password"><input id="p2" type="password" placeholder="${t("pw2")}" autocomplete="new-password"><div class="err">${msg}</div><button class="btn" data-a="create">${busy?t("busy"):t("create")}</button></div>`;
+if(!key)return`<div class="glass lock"><div class="big">🔒</div><h1>${t("secure")}</h1><p>${t("unl")}</p><input id="p1" type="password" placeholder="${t("pw")}" autocomplete="current-password"><div class="err">${msg}</div><button class="btn" data-a="unlock">${busy?t("busy"):t("unlock")}</button><p style="font-size:12px;margin-top:12px">${t("notice")}</p></div>`;
+return`<div class="glass"><div class="acts" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0;align-self:center">${t("secure")} · ${files.length}</h2><button class="btn g s" data-a="lock">🔒 ${t("lockn")}</button></div>
+<label class="btn" style="display:block;text-align:center;margin:10px 0">${busy?t("busy"):t("add")}<input id="up" type="file" multiple hidden></label>
+${files.length?files.map((f,i)=>`<div class="file"><div style="font-size:26px">${f.d.t.startsWith("image/")?"🖼️":f.d.t.includes("pdf")?"📕":"📄"}</div><div class="n">${esc(f.d.n)}<small>${(f.d.z/1024).toFixed(0)} KB${f.d.sh?" · 🔗 "+esc(f.d.sh.c||f.d.sh):""}${f.d.pub?" · 🌐":""}</small></div><div class="acts"><button class="btn g s" data-v="${i}">${t("view")}</button><button class="btn g s" data-d="${i}">${t("dl")}</button><button class="btn r s" data-x="${i}">✕</button></div></div>`).join(""):`<p>${t("empty")}</p>`}
+<p style="font-size:12px;margin-top:10px">${t("auto")}</p></div>`},
+set:()=>`<div class="glass"><h2>${t("lang")}</h2><div class="acts"><button class="btn ${L==="bn"?"":"g"}" data-l="bn">বাংলা</button><button class="btn ${L==="en"?"":"g"}" data-l="en">English</button></div></div>
+<div class="glass"><h2>${t("theme")}</h2><div class="acts"><button class="btn g" data-th="light">☀️</button><button class="btn g" data-th="dark">🌙</button></div></div>
+<div class="glass"><h2>${t("exp")}</h2><p>${t("expd")}</p>${vault?`<button class="btn" data-a="export" style="margin-top:8px">⬇️ ${t("exp")}</button>`:""}</div>`};
+const pr=()=>(vault&&vault.profile)||PP||{},rv=(f,k)=>pr()[f]||T[L][k];
+const DE=[{id:"e1",deg:"BA / BSS",inst:"Bangladesh Open University · Abdul Hai Degree College, Narail Center",per:"Oct 2025 – Present"}];
+let dr=null;
+const AC=[["#5b5bff","#00b8ff"],["#ff4d8d","#ff9f45"],["#00d68f","#00b8ff"],["#a855ff","#ff4dd2"]];
+const ap=i=>{const c=AC[i]||AC[0],s=document.documentElement.style;s.setProperty("--ac",c[0]);s.setProperty("--ac2",c[1])};
+const ini=s=>s.split(/\s+/).map(w=>w.replace(/[^\p{L}]/gu,"")[0]||"").filter(Boolean).slice(0,2).join("");
+const g=id=>{const e=document.getElementById(id);return e?e.value:""};
+function collect(){dr.name=g("f_name");dr.role=g("f_role");dr.about=g("f_about");dr.loc=g("f_loc");dr.phone=g("f_phone");dr.email=g("f_email");dr.skills=g("f_skills");dr.links=g("f_links");dr.blood=g("f_blood");dr.ecn=g("f_ecn");dr.ecp=g("f_ecp");dr.edu.forEach((e,i)=>{e.deg=g("d"+i);e.inst=g("n"+i);e.per=g("p"+i)})}
+function startEdit(){const p=pr();dr={name:rv("name","name"),role:rv("role","role"),about:rv("about","aboutv"),loc:rv("loc","locv"),phone:"phone" in p?p.phone:"+880 1765-329128",email:"email" in p?p.email:"shironamhinantor@gmail.com",skills:p.skills||"",links:p.links||"",blood:p.blood||"",ecn:p.ecn||"",ecp:p.ecp||"",photo:p.photo||"",edu:(p.edu||DE).map(e=>({...e}))};editing=true;render()}
+const inp=(id,l,v,ph)=>`<label class="fl">${l}<input id="${id}" value="${esc(v||"")}" placeholder="${ph||""}"></label>`;
+V.contact=()=>{const p=pr(),ph="phone" in p?p.phone:"+880 1765-329128",em="email" in p?p.email:"shironamhinantor@gmail.com";if(!ph&&!em)return"";return`<div class="glass"><h2>${t("contact")}</h2>${ph?row(t("phone"),esc(ph)):""}${em?row(t("email"),esc(em)):""}<div class="acts" style="margin-top:12px">${ph?`<a class="btn" href="tel:${esc(ph.replace(/[^\d+]/g,""))}">📞 ${t("call")}</a>`:""}${em?`<a class="btn g" href="mailto:${esc(em)}">✉️ ${t("mail")}</a>`:""}</div></div>`};
+V.profile=()=>{const p=pr(),E=p.edu||DE;
+if(editing&&key&&dr)return`<div class="glass"><h2>${t("editp")}</h2><div class="ring" style="margin:0 auto 12px"><div class="av"></div></div><div class="acts" style="justify-content:center;margin-bottom:14px"><label class="btn g s">📷 ${t("photo")}<input id="ph" type="file" accept="image/*" hidden></label></div>${inp("f_name",t("fname"),dr.name)}${inp("f_role",t("frole"),dr.role)}<label class="fl">${t("about")}<textarea id="f_about" rows="3">${esc(dr.about)}</textarea></label>${inp("f_loc",t("loc"),dr.loc)}${inp("f_phone",t("phone"),dr.phone)}${inp("f_email",t("email"),dr.email)}${inp("f_skills",t("skills"),dr.skills)}<label class="fl">${t("links")}<textarea id="f_links" rows="3" placeholder="https://">${esc(dr.links)}</textarea></label>${inp("f_blood",t("blood"),dr.blood,"O+")}${inp("f_ecn",t("ecn"),dr.ecn)}${inp("f_ecp",t("ecp"),dr.ecp)}</div>
+<div class="glass"><h2>${t("edu")}</h2>${dr.edu.map((e,i)=>`<div class="eb">${inp("d"+i,t("ldeg"),e.deg)}${inp("n"+i,t("inst"),e.inst)}${inp("p"+i,t("per"),e.per)}<div class="acts"><label class="btn g s">📎 ${e.cert?t("replace"):t("attach")}<input class="cf" data-e="${i}" type="file" accept="image/*,application/pdf" hidden></label><button class="btn r s" data-xe="${i}">✕</button></div></div>`).join("")}<button class="btn g" data-a="adde">${t("adde")}</button></div>
+<div class="acts" style="margin-bottom:14px"><button class="btn" data-a="save">💾 ${t("save")}</button><button class="btn g" data-a="cancel">${t("cancel")}</button></div>`;
+const sk=(p.skills||"").split(",").map(s=>s.trim()).filter(Boolean);
+return`<div class="glass hero big"><div class="ring"><div class="av"></div></div><div><h1 class="grad">${t("name")}</h1><p>${t("role")}</p></div><button class="btn g s" data-a="edit">${key?"✏️ "+t("editp"):"🔑 "+t("owner")}</button></div>
+<div class="glass"><h2>${t("about")}</h2><p>${t("aboutv")}</p></div>
+<div class="glass"><h2>${t("edu")}</h2><div class="tl">${E.map(e=>`<div class="ti"><b>${esc(e.deg)}</b><p>${esc(e.inst)}</p><small>${esc(e.per)}</small>${e.cert?`<div><button class="btn g s" data-c="${e.id}">🔒 ${t("cert")}</button></div>`:""}</div>`).join("")}</div></div>
+${sk.length?`<div class="glass"><h2>${t("skills").split(" (")[0]}</h2><div class="chips">${sk.map(s=>`<span>${esc(s)}</span>`).join("")}</div></div>`:""}
+<div class="glass"><h2>${t("loc")}</h2><p>📍 ${t("locv")}</p></div>${V.contact()}${links()}${emerg()}`};
+Object.assign(T.en,{c_pass:"Passport",c_visa:"Visa",c_nid:"National ID",c_cert:"Certificates",c_other:"Others",back:"Back"});
+Object.assign(T.bn,{c_pass:"পাসপোর্ট",c_visa:"ভিসা",c_nid:"জাতীয় পরিচয়পত্র",c_cert:"সনদ",c_other:"অন্যান্য",back:"পিছনে"});
+Object.assign(T.en,{c_license:"Driving License",c_birth:"Birth Certificate",c_bank:"Bank",c_medical:"Medical",xdate:"Expiry date",expired:"Expired",dleft:"days left"});
+Object.assign(T.bn,{c_license:"ড্রাইভিং লাইসেন্স",c_birth:"জন্মনিবন্ধন",c_bank:"ব্যাংক",c_medical:"মেডিকেল",xdate:"মেয়াদ শেষের তারিখ",expired:"মেয়াদ শেষ",dleft:"দিন বাকি"});
+const nd=f=>Math.ceil((new Date(f.d.x)-Date.now())/864e5);
+const bdg=f=>{if(!f.d.x)return"";const n=nd(f);return`<b class="bg ${n<90?"r":""}">${n<0?t("expired"):bn(n)+" "+t("dleft")}</b>`};
+const warn=()=>{const s=files.filter(f=>f.d.x&&nd(f)<90);return s.length?`<div class="warn">⏰ ${s.map(f=>esc(f.d.n)+" · "+(nd(f)<0?t("expired"):bn(nd(f))+" "+t("dleft"))).join("<br>")}</div>`:""};
+const dx=(f,i)=>`<div class="xr"><label>${t("xdate")} <input type="date" class="ex" data-ei="${i}" value="${esc(f.d.x||"")}"></label>${bdg(f)}</div>`;
+let cat=null;
+const CK=[["pass","🛂","linear-gradient(135deg,#5b5bff,#8d6bff)"],["visa","✈️","linear-gradient(135deg,#00c2a8,#00b8ff)"],["nid","🪪","linear-gradient(135deg,#ff7a45,#ff3d71)"],["cert","🎓","linear-gradient(135deg,#f5b400,#ff7a45)"],["license","🚗","linear-gradient(135deg,#22c55e,#16a34a)"],["birth","📄","linear-gradient(135deg,#ec4899,#a855f7)"],["bank","🏦","linear-gradient(135deg,#0ea5e9,#2563eb)"],["medical","🏥","linear-gradient(135deg,#f43f5e,#be123c)"],["cv","📄","linear-gradient(135deg,#14b8a6,#0d9488)"],["other","📁","linear-gradient(135deg,#6b7280,#374151)"]];
+const fk=f=>f.d.k||(f.d.e?"cert":"other");
+const _d=V.docs;V.docs=()=>{if(!vault||!key)return _d();
+const bar=`<div class="acts" style="justify-content:space-between;margin-bottom:12px"><h2 style="margin:0;align-self:center">${t("secure")} · ${files.length}</h2><button class="btn g s" data-a="lock">🔒 ${t("lockn")}</button></div>`;
+if(!cat)return`<div class="glass">${bar}${warn()}<div class="cg">${CK.map(([k,i,bg])=>`<button class="cc" data-cat="${k}"><div class="ic" style="background:${bg};font-size:28px">${i}</div><b>${t("c_"+k)}</b><small>${files.filter(f=>fk(f)===k).length}</small></button>`).join("")}</div><p style="font-size:12px;margin-top:12px">${t("auto")}</p></div>`;
+const ls=files.map((f,i)=>[f,i]).filter(([f])=>fk(f)===cat),c=CK.find(q=>q[0]===cat);
+return`<div class="glass">${bar}<button class="btn g s" data-cat="">← ${t("back")}</button><h1 style="margin:14px 0 4px">${c[1]} ${t("c_"+cat)}</h1><label class="fl"><input id="ds" placeholder="🔎 ${B("খুঁজুন","Search")}"></label><label class="btn" style="display:block;text-align:center;margin:12px 0">${busy?t("busy"):t("add")}<input id="up" type="file" multiple hidden></label>${ls.length?ls.map(([f,i])=>`<div class="file"><div style="font-size:26px">${f.d.t.startsWith("image/")?"🖼️":f.d.t.includes("pdf")?"📕":"📄"}</div><div class="n">${esc(f.d.n)}<small>${(f.d.z/1024).toFixed(0)} KB${f.d.sh?" · 🔗 "+esc(f.d.sh.c||f.d.sh):""}${f.d.pub?" · 🌐":""}</small></div><div class="acts"><button class="btn g s" data-v="${i}">${t("view")}</button><button class="btn g s" data-d="${i}">${t("dl")}</button><button class="btn g s" data-a="pubt" data-i="${i}">🌐${f.d.pub?"✓":""}</button><button class="btn g s" data-a="shr" data-i="${i}">🔗${f.d.sh?"✓":""}</button><button class="btn r s" data-x="${i}">✕</button></div></div>${dx(f,i)}`).join(""):`<p>${t("empty")}</p>`}</div>`};Object.assign(T.en,{emg:"Emergency",blood:"Blood group",ecn:"Emergency contact name",ecp:"Emergency contact phone",links:"Links (one per line, https://…)",linkh:"Links",share:"Share profile (QR)",qrt:"Scan to open this profile",newpw:"New password",chpw:"Change vault password",done:"✓ Done"});
+Object.assign(T.bn,{emg:"জরুরি যোগাযোগ",blood:"রক্তের গ্রুপ",ecn:"জরুরি যোগাযোগের নাম",ecp:"জরুরি যোগাযোগের ফোন",links:"লিংক (এক লাইনে একটা, https://…)",linkh:"লিংক",share:"প্রোফাইল শেয়ার (QR)",qrt:"স্ক্যান করলে প্রোফাইল খুলবে",newpw:"নতুন পাসওয়ার্ড",chpw:"ভল্টের পাসওয়ার্ড বদলান",done:"✓ সম্পন্ন"});
+async function chpw(pw){const salt=crypto.getRandomValues(new Uint8Array(16)),k=await derive(pw,salt),nf=[];for(const f of files)nf.push({d:f.d,s:await seal(k,f.d)});key=k;files=nf;vault.it=await seal(k,IT);vault.qs=await seal(k,QS);vault.salt=b64(salt);vault.check=await seal(k,{ok:1});await persist()}
+const pwCard=()=>key?`<div class="glass"><h2>${t("chpw")}</h2><input id="np" type="password" placeholder="${t("newpw")}" autocomplete="new-password"><div class="err">${msg}</div><button class="btn" data-a="chpw">${busy?t("busy"):t("chpw")}</button></div>`:"";
+const emerg=()=>{const p=pr();if(!p.blood&&!p.ecp)return"";return`<div class="glass sos"><h2>🚨 ${t("emg")}</h2>${p.blood?row(t("blood"),`<b style="color:#ff6369;font-size:20px">${esc(p.blood)}</b>`):""}${p.ecn?row(t("ecn"),esc(p.ecn)):""}${p.ecp?`<a class="btn r" style="margin-top:10px" href="tel:${esc(p.ecp.replace(/[^\d+]/g,""))}">📞 ${esc(p.ecp)}</a>`:""}</div>`};
+const links=()=>{const a=(pr().links||"").split(/\s+/).filter(u=>/^https?:\/\//i.test(u));return a.length?`<div class="glass"><h2>${t("linkh")}</h2><div class="chips">${a.map(u=>{let h=u;try{h=new URL(u).hostname.replace("www.","")}catch(_){}return`<a href="${esc(u)}" target="_blank" rel="noopener">🔗 ${esc(h)}</a>`}).join("")}</div></div>`:""};
+function showQR(){if(!key)return;const u=location.origin+location.pathname+"?v=1";let svg="";try{const q=qrcode(0,"M");q.addData(u);q.make();svg=q.createSvgTag(6,2)}catch(_){svg="<p>QR unavailable</p>"}const d=$("#dlg");d.innerHTML=`<div class="acts" style="justify-content:space-between;margin-bottom:12px"><b>${t("share")}</b><button class="btn g s" data-a="close">${t("close")}</button></div><div class="qr">${svg}</div><p style="text-align:center;font-size:12px;word-break:break-all">${esc(u)}</p><p style="text-align:center">${t("qrt")}</p>`;d.showModal()}
+const _h=V.home;V.home=()=>_h()+(!key?"":`<div class="glass"><button class="shb" data-a="qr"><i>${S('<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1"/>')}</i><span>${t("share")}</span><em>›</em></button></div>`);
+const _s0=V.set;const _s=()=>_s0()+pwCard();V.set=()=>_s()+`<div class="glass"><h2>${t("accent")}</h2><div class="sw">${AC.map((c,i)=>`<button data-ac="${i}" style="background:linear-gradient(135deg,${c[0]},${c[1]})"></button>`).join("")}</div></div>`;
+Object.assign(T.en,{clk12:"Clock format"});Object.assign(T.bn,{clk12:"ঘড়ির ফর্ম্যাট"});
+let H12=true;try{H12=localStorage.getItem("h12")!=="0"}catch(_){}
+const _s3=V.set;V.set=()=>_s3()+`<div class="glass"><h2>${t("clk12")}</h2><div class="acts"><button class="btn ${H12?"":"g"}" data-h="1">12h · AM/PM</button><button class="btn ${H12?"g":""}" data-h="0">24h</button></div></div>`;
+const lk='<rect x="5" y="11" width="14" height="10" rx="3"/><path d="M8 11V8a4 4 0 018 0v3"/>',fl='<path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/>';
+const EI={"🔒":lk,"🔐":lk,"🔓":'<rect x="5" y="11" width="14" height="10" rx="3"/><path d="M8 11V8a4 4 0 017.5-2"/>',"🛡":'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',"📞":'<path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z"/>',"✉":'<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 8l9 6 9-6"/>',"✏":'<path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/>',"🔑":'<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/>',"📷":'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',"📎":'<path d="M20 11l-8 8a5 5 0 01-7-7l8-8a3.5 3.5 0 015 5l-8 8a2 2 0 01-3-3l7-7"/>',"💾":'<path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/>',"⏰":'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M5 4L3 6M19 4l2 2"/>',"🚨":'<path d="M12 3L2 20h20z"/><path d="M12 10v4M12 17v.5"/>',"🔗":'<path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/>',"📍":'<path d="M12 21s7-6 7-12a7 7 0 10-14 0c0 6 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/>',"⬇":'<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>',"🖼":'<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.7"/><path d="M4 18l5-5 4 4 3-3 4 4"/>',"📕":fl,"📄":fl,"📁":'<path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>',"🛂":'<rect x="5" y="3" width="14" height="18" rx="2.5"/><circle cx="12" cy="11" r="3.5"/><path d="M9 17h6"/>',"✈":'<path d="M21 3L3 11l7 3 3 7z"/><path d="M10 14l11-11"/>',"🪪":'<rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.5-2 5.5-2 6 0M14 10h4M14 14h3"/>',"🎓":'<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2.5 9 2.5 12 0v-5"/>',"🚗":'<path d="M4 16v-4l2-5h12l2 5v4zM4 16v2M20 16v2"/><circle cx="8" cy="14" r="1"/><circle cx="16" cy="14" r="1"/>',"🏦":'<path d="M3 10l9-6 9 6zM5 10v8M10 10v8M14 10v8M19 10v8M3 20h18"/>',"🏥":'<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/>',"☀":'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/>',"🌙":'<path d="M20 14A8 8 0 019 4a8 8 0 1011 10z"/>'};
+const ico=h=>h.replace(/(<[^>]*>)|([\u2300-\u27BF\u2B00-\u2BFF]|[\u{1F300}-\u{1FAFF}])\uFE0F?/gu,(m,tg,c)=>tg?tg:(EI[c]?`<i class="ei">${S(EI[c])}</i>`:m));
+function render(){const keep=document.activeElement&&document.activeElement.id;$("#app").innerHTML=ico(V[tab]());setTimeout(()=>tick(),0);
+const tb=[["home","🏠"],["profile","👤"],["docs","🔐"],["find","🔎"],["set","⚙️"]];
+$("#tabs").innerHTML=tb.map(([k,i])=>`<button data-tab="${k}" class="${tab===k?"on":""}"><i>${SV[k]}</i>${t(k)}</button>`).join("");
+document.documentElement.lang=L;{const ph=editing&&key&&dr?dr.photo:pr().photo;document.querySelectorAll(".av").forEach(a=>{a.innerHTML=ph?`<img src="${ph}" alt="" style="width:100%;height:100%;object-fit:cover">`:esc(ini(rv("name","name")))})}const u=$("#up");if(u)u.onchange=e=>addFiles([...e.target.files]);}
+document.addEventListener("click",async e=>{const x=e.target.closest("[data-tab],[data-a],[data-l],[data-th],[data-v],[data-d],[data-x],[data-c],[data-xe],[data-ac],[data-cat],[data-h]");if(!x)return;touch();const D=x.dataset;
+if(D.c){const f=files.find(q=>q.d.e===D.c);if(key){if(f)preview(f)}else{pend=D.c;tab="docs";render()}}
+else if(D.xe!==undefined){collect();const e=dr.edu.splice(+D.xe,1)[0];files=files.filter(q=>q.d.e!==e.id);await persist();render()}
+else if(D.ac!==undefined){ap(+D.ac);try{localStorage.setItem("ac",D.ac)}catch(_){}}
+else if(D.a==="edit"){if(key)startEdit();else{pend="edit";tab="docs";render()}}
+else if(D.a==="adde"){collect();dr.edu.push({id:"e"+Date.now(),deg:"",inst:"",per:""});render()}
+else if(D.h!==undefined){H12=D.h==="1";try{localStorage.setItem("h12",D.h)}catch(_){}tick();render()}
+else if(D.a==="qr")showQR();
+else if(D.a==="chpw"){const v=g("np");if(v.length<8){msg=t("short");return render()}busy=true;render();await chpw(v);busy=false;msg=t("done");render()}
+else if(D.cat!==undefined){cat=D.cat||null;render()}
+else if(D.a==="cancel"){editing=false;render()}
+else if(D.a==="save"){collect();vault.profile={...dr,edu:dr.edu.filter(e=>e.deg||e.inst)};await persist();editing=false;scrollTo(0,0);render()}
+else if(D.tab){tab=D.tab;msg="";scrollTo(0,0);render()}
+else if(D.l){L=D.l;try{localStorage.setItem("l",L)}catch(_){}render()}
+else if(D.th){document.documentElement.dataset.theme=D.th}
+else if(D.v!==undefined)preview(files[D.v]);
+else if(D.d!==undefined)download(files[D.d]);
+else if(D.x!==undefined){if(confirm(t("confirm"))){files.splice(+D.x,1);await persist();render()}}
+else if(D.a==="close")$("#dlg").close();
+else if(D.a==="lock")lock();
+else if(D.a==="export")exportSite();
+else if(D.a==="create"){const a=$("#p1").value,b=$("#p2").value;if(a.length<8){msg=t("short");return render()}if(a!==b){msg=t("nomatch");return render()}busy=true;render();await create(a);busy=false;msg="";touch();render()}
+else if(D.a==="unlock"){const a=$("#p1").value;busy=true;msg="";render();try{await unlock(a);FL=0;touch();if(pend==="edit"){pend=null;tab="profile";startEdit()}else if(pend){const f=files.find(q=>q.d.e===pend);pend=null;tab="profile";if(f)setTimeout(()=>preview(f),60)}}catch(_){msg=t("wrong");FL++;await new Promise(r=>setTimeout(r,1200*Math.min(FL,10)))}busy=false;render()}});
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id&&e.target.id.startsWith("p")){const b=document.querySelector("[data-a=create],[data-a=unlock]");if(b)b.click()}});
+["pointerdown","keydown"].forEach(v=>addEventListener(v,touch,{passive:true}));
+const tick=()=>{const c=$("#clk");if(!c)return;const d=new Date(),l=L==="bn"?"bn-BD":"en-GB";c.textContent=new Intl.DateTimeFormat(l,{hour:"numeric",minute:"2-digit",hour12:H12}).formatToParts(d).map(x=>x.type==="hour"?x.value.replace(/^[0\u09E6]+(?=[\d\u09E6-\u09EF])/,""):x.value).join("");$("#dt").textContent=d.toLocaleDateString(l,{weekday:"short",day:"numeric",month:"short"})};document.addEventListener("change",async e=>{const x=e.target;if(x.dataset.ei===undefined||!key)return;const f=files[+x.dataset.ei];f.d.x=x.value;f.s=await seal(key,f.d);await persist();render()});
+setInterval(tick,1000);
+try{const a=localStorage.getItem("ac");if(a)ap(+a)}catch(_){}
+document.addEventListener("change",async e=>{const x=e.target,f=x.files&&x.files[0];if(!f||!key||!dr)return;
+if(x.id==="ph"){collect();const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const c=document.createElement("canvas");c.width=c.height=320;const m=Math.min(im.width,im.height);c.getContext("2d").drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,320,320);dr.photo=c.toDataURL("image/jpeg",.82);render()};im.src=r.result};r.readAsDataURL(f)}
+else if(x.classList.contains("cf")){collect();const ed=dr.edu[+x.dataset.e];files=files.filter(q=>q.d.e!==ed.id);const d={n:f.name,t:f.type||"application/octet-stream",z:f.size,b:b64(await f.arrayBuffer()),e:ed.id};files.push({d,s:await seal(key,d)});ed.cert=true;await persist();render()}});
+
+/* ===== Finder + Firebase sharing ===== */
+const B=(b,e)=>L==="bn"?b:e;
+const FB={apiKey:"AIzaSyCbHh-1r6NvCi68wGtxOAHRCEvUX9c3nmg",authDomain:"my-pofile.firebaseapp.com",projectId:"my-pofile",appId:"1:240273747170:web:0d62e08a11f9c2bb8842bb"}; // <-- Firebase config এখানে বসান
+let IT=[],PP=null,PUB=[],db,au;
+const fbOn=()=>{if(db)return true;if(!FB.projectId||!window.firebase){alert(B("Firebase কনফিগ বসানো হয়নি (index.html-এর FB অংশ)","Firebase config missing (FB in index.html)"));return false}firebase.initializeApp(FB);db=firebase.firestore();au=firebase.auth();return true};
+const sha=async s=>[...new Uint8Array(await crypto.subtle.digest("SHA-256",enc.encode(s)))].map(x=>x.toString(16).padStart(2,"0")).join("");
+const shk=c=>derive(c,enc.encode("antor-share"));
+async function login(){if(au.currentUser)return;await au.signInWithEmailAndPassword(prompt("Email"),prompt(B("ক্লাউড পাসওয়ার্ড","Cloud password")))}
+const save=async()=>{vault.it=await seal(key,IT);await persist()};
+const CH=9e5;
+const W=async f=>{document.body.style.opacity=.6;try{return await f()}finally{document.body.style.opacity=""}};
+const put=async(r,str)=>{const n=Math.ceil(str.length/CH);for(let k=0;k<n;k++)await r.collection("c").doc(""+k).set({d:str.slice(k*CH,(k+1)*CH)});return n};
+const take=async(r,n)=>(await Promise.all(Array.from({length:n},(_,k)=>r.collection("c").doc(""+k).get()))).map(d=>d.data().d).join("");
+const wipe=async(r,n)=>{for(let k=0;k<n;k++)await r.collection("c").doc(""+k).delete();await r.delete()};
+const big=f=>f.d.z>3e7&&(alert(B("৩০ MB-এর বেশি নয়","Max 30 MB")),true);
+async function pubt(i){const f=files[i];await W(async()=>{try{if(!fbOn())return;await login();if(f.d.pub){const P=f.d.pub;await wipe(db.collection("pubfiles").doc(P.id||P),P.n||0);delete f.d.pub}else{if(big(f))return;const id="p"+Date.now(),r=db.collection("pubfiles").doc(id),n=await put(r,f.d.b);await r.set({n:f.d.n,t:f.d.t,c:n,k:f.d.k||"other"});f.d.pub={id,n}}f.s=await seal(key,f.d);await persist();render()}catch(e){alert(e.message)}})}
+async function shr(i){const f=files[i];await W(async()=>{try{if(!fbOn())return;await login();if(f.d.sh){const c=f.d.sh;await wipe(db.collection("shares").doc(await sha(c.c||c)),c.n||0);delete f.d.sh}else{if(big(f))return;const c=[...crypto.getRandomValues(new Uint8Array(10))].map(x=>"abcdefghjkmnpqrstuvwxyz23456789"[x%31]).join(""),k=await shk(c),iv=crypto.getRandomValues(new Uint8Array(12)),ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},k,unb(f.d.b)),r=db.collection("shares").doc(await sha(c)),n=await put(r,b64(ct));await r.set({m:await seal(k,{n:f.d.n,t:f.d.t}),iv:b64(iv),c:n});f.d.sh={c,n};prompt(B("কোড/লিংক কপি করুন","Copy code/link"),location.origin+location.pathname+"?c="+c)}f.s=await seal(key,f.d);await persist();render()}catch(e){alert(e.message)}})}
+async function getc(c){c=(typeof c==="string"?c:g("sc")).trim();if(!c||!fbOn())return;await W(async()=>{try{const r=db.collection("shares").doc(await sha(c)),m=await r.get();if(!m.exists)return alert(B("কোড ভুল বা বন্ধ করা হয়েছে","Invalid or revoked code"));const D=m.data(),k=await shk(c),{n,t}=await open(k,D.m),pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb(D.iv)},k,unb(await take(r,D.c)));preview({d:{n,t,b:b64(pt)}})}catch(e){alert(e.message)}})}
+async function pubp(){try{if(!fbOn())return;await login();const p={...pr()};["blood","ecn","ecp"].forEach(k=>delete p[k]);await db.collection("pub").doc("profile").set(p);alert("✓")}catch(e){alert(e.message)}}
+const fnd=q=>{q=(q||"").toLowerCase();const a=IT.map((x,i)=>[x,i]).filter(([x])=>(x.n+" "+x.p+" "+x.t).toLowerCase().includes(q));return a.length?a.map(([x,i])=>`<div class="file"><div style="font-size:24px">📍</div><div class="n" style="white-space:normal">${esc(x.n)}<small>📌 ${esc(x.p)}${x.t?" · "+esc(x.t):""}</small></div><button class="btn r s" data-a="deli" data-i="${i}">✕</button></div>`).join(""):`<p>${B("কিছু পাওয়া যায়নি","Nothing found")}</p>`};
+T.en.find="Finder";T.bn.find="কোথায়";SV.find=S('<circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/>');
+V.find=()=>{if(!key)return V.docs();return`<div class="glass"><label class="fl">🔎<input id="q" placeholder="${B("কোন জিনিস খুঁজছেন?","Search an item")}"></label><div id="il">${fnd("")}</div></div><div class="glass"><h2>${B("নতুন জিনিস","New item")}</h2>${inp("i_n",B("জিনিসের নাম","Item"),"")}${inp("i_p",B("কোথায় রেখেছেন","Where it is"),"")}${inp("i_t",B("নোট (ঐচ্ছিক)","Note"),"")}<button class="btn" data-a="addi">${B("সেভ","Save")}</button></div>`};
+const pubdocs=()=>PUB.length?`<div class="glass"><h2>${B("পাবলিক ডকুমেন্ট","Public documents")}</h2>${PUB.map((p,i)=>`<div class="file"><div class="n">${esc(p.d.n)}</div><button class="btn g s" data-a="pv" data-i="${i}">${t("view")}</button></div>`).join("")}</div>`:"";
+const _pf=V.profile;V.profile=()=>editing?_pf():_pf()+cvbtn()+pubdocs();
+const _dd=V.docs;V.docs=()=>key?_dd():_dd()+`<div class="glass"><h2>${B("শেয়ার কোড আছে?","Have a share code?")}</h2><label class="fl"><input id="sc" placeholder="CODE"></label><button class="btn" data-a="getc">${B("খুলুন","Open")}</button></div>`;
+const _st=V.set;V.set=()=>_st()+(vault?`<div class="glass"><h2>☁️ ${B("ক্লাউড","Cloud")}</h2><p>${B("প্রোফাইল পাবলিশ করলে সাইট খুললে যে কেউ দেখবে (রক্তের গ্রুপ ও জরুরি নম্বর বাদে)।","Publishing shows your profile to every visitor (blood group and emergency contact excluded).")}</p><button class="btn" data-a="pubp">☁️ ${B("প্রোফাইল পাবলিশ","Publish profile")}</button></div>`:"");
+document.addEventListener("input",e=>{if(e.target.id==="q"&&$("#il"))$("#il").innerHTML=fnd(e.target.value)});
+document.addEventListener("click",async e=>{const x=e.target.closest("[data-a]");if(!x)return;const a=x.dataset.a,i=+x.dataset.i;
+if(a==="addi"){const n=g("i_n").trim();if(!n)return;IT.unshift({n,p:g("i_p"),t:g("i_t")});await save();render()}
+else if(a==="deli"){IT.splice(i,1);await save();$("#il").innerHTML=fnd(g("q"))}
+else if(a==="pubt")await pubt(i);else if(a==="shr")await shr(i);else if(a==="pubp")await pubp();else if(a==="getc")await getc();
+else if(a==="pv"){const p=PUB[i];await W(async()=>{try{preview({d:{n:p.d.n,t:p.d.t,b:await take(db.collection("pubfiles").doc(p.id),p.d.c)}})}catch(e){alert(e.message)}})}else if(a==="dlp"&&LP)download(LP);else if(a==="bk"&&vault)bk();else if(a==="lp"){$("#dlg").close();tab="profile";render()}else if(a==="lcx"){const p=PUB.find(q=>q.d.k==="cv");if(p)await W(async()=>{try{download({d:{n:p.d.n,t:p.d.t,b:await take(db.collection("pubfiles").doc(p.id),p.d.c)}})}catch(e){alert(e.message)}})}else if(a==="lk"){LK=i*6e4;try{localStorage.setItem("lk",LK)}catch(_){}touch();render()}});
+Object.assign(T.en,{c_cv:"CV"});Object.assign(T.bn,{c_cv:"সিভি"});
+const QV=new URLSearchParams(location.search).get("v");
+function landing(){const cv=PUB.find(p=>p.d.k==="cv"),d=$("#dlg");d.innerHTML=`<div style="text-align:center;padding:10px 0"><h1 class="grad">${t("name")}</h1><p>${t("role")}</p><div class="acts" style="justify-content:center;margin-top:16px"><button class="btn" data-a="lp">👤 ${B("প্রোফাইল দেখুন","View profile")}</button>${cv?`<button class="btn g" data-a="lc">⬇ ${B("CV ডাউনলোড","Download CV")}</button>`:""}</div></div>`;d.showModal()}
+let LK=120000,FL=0;try{LK=+localStorage.getItem("lk")||120000}catch(_){}
+const bn=n=>L==="bn"?n.toLocaleString("bn-BD"):n;
+const _hh=V.home;V.home=()=>(key?warn():"")+_hh();
+async function bk(){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(vault)],{type:"application/json"}));a.download="antor-backup.json";document.body.appendChild(a);a.click();a.remove()}
+const _s4=V.set;V.set=()=>_s4()+(vault?`<div class="glass"><h2>💾 ${B("ব্যাকআপ","Backup")}</h2><p>${B("এনক্রিপ্টেড ব্যাকআপ ফাইল (পাসওয়ার্ড ছাড়া খোলা যায় না)।","Encrypted backup file (useless without your password).")}</p><div class="acts"><button class="btn" data-a="bk">⬇ ${B("ব্যাকআপ","Backup")}</button><label class="btn g">⬆ ${B("রিস্টোর","Restore")}<input id="rs" type="file" accept=".json" hidden></label></div></div><div class="glass"><h2>⏱ ${B("অটো-লক","Auto-lock")}</h2><div class="acts">${[1,2,5,15].map(m=>`<button class="btn s ${LK===m*6e4?"":"g"}" data-a="lk" data-i="${m}">${bn(m)} ${B("মিনিট","min")}</button>`).join("")}</div></div>`:"");
+document.addEventListener("input",e=>{if(e.target.id!=="ds")return;const v=e.target.value.toLowerCase();document.querySelectorAll(".file").forEach(r=>{const h=!r.textContent.toLowerCase().includes(v),n=r.nextElementSibling;r.style.display=h?"none":"";if(n&&n.classList.contains("xr"))n.style.display=h?"none":""})});
+document.addEventListener("change",async e=>{const x=e.target;if(x.id!=="rs"||!x.files[0])return;try{const v=JSON.parse(await x.files[0].text());if(!v.salt||!v.check)throw 0;if(!confirm(B("বর্তমান ভল্ট বদলে যাবে। চালিয়ে যাবেন?","This replaces the current vault. Continue?")))return;vault=v;await dbSet(v);key=null;files=[];IT=[];render()}catch(_){alert(B("ব্যাকআপ ফাইল ঠিক নয়","Invalid backup file"))}});
+let QS=[],CVK="";
+const rnd=n=>[...crypto.getRandomValues(new Uint8Array(n))].map(x=>"abcdefghjkmnpqrstuvwxyz23456789"[x%31]).join("");
+const saveQS=async()=>{vault.qs=await seal(key,QS);await persist()};
+const cvbtn=()=>CVK?`<div class="glass"><button class="btn" data-a="lc">⬇ CV ${B("ডাউনলোড","download")}</button></div>`:"";
+async function cvKey(){const f=files.find(q=>q.d.k==="cv");if(!f)return"";if(!f.d.qk){const rk=crypto.getRandomValues(new Uint8Array(32)),ck=await crypto.subtle.importKey("raw",rk,"AES-GCM",false,["encrypt"]),iv=crypto.getRandomValues(new Uint8Array(12)),ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},ck,unb(f.d.b)),r=db.collection("cvs").doc("main"),n=await put(r,b64(ct));await r.set({n:f.d.n,t:f.d.t,iv:b64(iv),c:n});f.d.qk=b64(rk);f.s=await seal(key,f.d);await persist()}return f.d.qk}
+async function mkTok(K){const tk=rnd(10);await db.collection("tokens").doc(await sha(tk)).set({u:false,w:await seal(await shk(tk),{k:K})});return tk}
+async function showQR(){if(!key)return;await W(async()=>{try{if(navigator.onLine&&fbOn()){await login();const K=await cvKey(),live=[];for(const tk of QS){try{const d=await db.collection("tokens").doc(await sha(tk)).get();if(d.exists&&!d.data().u)live.push(tk)}catch(_){live.push(tk)}}QS=live;while(QS.length<3)QS.push(await mkTok(K));await saveQS()}if(!QS.length)return alert(B("অফলাইনে আছেন। অনলাইনে একবার QR খুলে রাখুন, তাহলে অফলাইনেও দেখানো যাবে","Offline: open the QR once while online to stock QR codes"));qrShow()}catch(e){alert(e.message)}})}
+function qrShow(){const q=qrcode(0,"M");q.addData(location.origin+location.pathname+"?v="+QS[0]);q.make();const d=$("#dlg");d.innerHTML=`<div class="acts" style="justify-content:space-between;margin-bottom:12px"><b>${t("share")}</b><button class="btn g s" data-a="close">${t("close")}</button></div><div class="qr">${q.createSvgTag(6,2)}</div><p style="text-align:center">${B("একবার স্ক্যান করলেই এই QR অকেজো। জমানো QR: ","Works once. Stocked QR: ")}${bn(QS.length)}</p><div class="acts" style="justify-content:center"><button class="btn g" data-a="nq">${B("পরের QR","Next QR")}</button></div>`;d.showModal()}
+async function qrOpen(tk){try{if(!fbOn())return;const ref=db.collection("tokens").doc(await sha(tk));const w=await db.runTransaction(async t=>{const d=await t.get(ref);if(!d.exists||d.data().u)throw 0;t.update(ref,{u:true});return d.data().w});CVK=(await open(await shk(tk),w)).k;landing(true)}catch(_){landing(false)}}
+function landing(ok){const d=$("#dlg");d.innerHTML=ok?`<div style="text-align:center;padding:10px 0"><h1 class="grad">${t("name")}</h1><p>${t("role")}</p><div class="acts" style="justify-content:center;margin-top:16px"><button class="btn" data-a="lp">👤 ${B("প্রোফাইল দেখুন","View profile")}</button>${CVK?`<button class="btn g" data-a="lc">⬇ ${B("CV ডাউনলোড","Download CV")}</button>`:""}</div></div>`:`<p style="text-align:center;padding:14px">${B("এই QR আগেই ব্যবহার হয়ে গেছে বা মেয়াদ শেষ।","This QR was already used.")}</p><div class="acts" style="justify-content:center"><button class="btn g" data-a="close">${t("close")}</button></div>`;d.showModal()}
+document.addEventListener("click",async e=>{const x=e.target.closest('[data-a="lc"],[data-a="nq"]');if(!x)return;if(x.dataset.a==="nq"){QS.shift();await saveQS();QS.length?qrShow():$("#dlg").close();return}
+await W(async()=>{try{const r=db.collection("cvs").doc("main"),D=(await r.get()).data(),k=await crypto.subtle.importKey("raw",unb(CVK),"AES-GCM",false,["decrypt"]),pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb(D.iv)},k,unb(await take(r,D.c)));download({d:{n:D.n,t:D.t,b:b64(pt)}})}catch(e){alert(e.message)}})});
+if("serviceWorker" in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{});
+(async()=>{if(!FB.projectId||!window.firebase||!fbOn()){if(QV)qrOpen(QV);return}try{const p=await db.collection("pub").doc("profile").get();PP=p.exists?p.data():null;PUB=(await db.collection("pubfiles").get()).docs.map(d=>({id:d.id,d:d.data()}))}catch(_){}render();const c=new URLSearchParams(location.search).get("c");if(c){tab="docs";getc(c)}else if(QV)qrOpen(QV)})();
+(async()=>{let v=await dbGet();if(!v){try{const e=JSON.parse($("#vault").textContent);if(e&&e.salt)v=e}catch(_){}}vault=v||null;render()})();
+</script></body></html>
