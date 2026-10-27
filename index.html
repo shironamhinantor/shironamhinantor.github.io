@@ -163,6 +163,7 @@ profile:()=>`<div class="glass hero"><div class="av">AN</div><div><h1>${t("name"
 <div class="glass"><h2>${t("loc")}</h2><p>📍 ${t("locv")}</p></div>${V.contact()}`,
 contact:()=>`<div class="glass"><h2>${t("contact")}</h2>${row(t("phone"),"+880 1765-329128")}${row(t("email"),"shironamhinantor@gmail.com")}<div class="acts" style="margin-top:12px"><a class="btn" href="tel:+8801765329128">📞 ${t("call")}</a><a class="btn g" href="mailto:shironamhinantor@gmail.com">✉️ ${t("mail")}</a></div></div>`,
 docs:()=>{
+if(!vault&&!ownOK())return`<div class="glass lock"><div class="big">🔒</div><h1>${L==="bn"?"শুধু মালিকের জন্য":"Owner only"}</h1><p>${L==="bn"?"এই অংশটি লক করা আছে। মালিক Settings থেকে Google সাইন-ইন করলে খুলবে।":"This section is locked. It opens only after the owner signs in from Settings."}</p></div>`;
 if(!vault)return`<div class="glass lock"><div class="big">🛡️</div><h1>${t("setup")}</h1><p>${t("setup2")}</p><input id="p1" type="password" placeholder="${t("pw")}" autocomplete="new-password"><input id="p2" type="password" placeholder="${t("pw2")}" autocomplete="new-password"><div class="err">${msg}</div><button class="btn" data-a="create">${busy?t("busy"):t("create")}</button><button class="btn g" data-a="cpull" style="margin-top:10px">☁️ ${B("আমার আগের ভল্ট ফিরিয়ে আনুন (মালিক Google সাইন-ইন)","Restore my vault (owner Google sign-in)")}</button></div>`;
 if(!key)return`<div class="glass lock"><div class="big">🔒</div><h1>${t("secure")}</h1><p>${t("unl")}</p><input id="p1" type="password" placeholder="${t("pw")}" autocomplete="current-password"><div class="err">${msg}</div><button class="btn" data-a="unlock">${busy?t("busy"):t("unlock")}</button><p style="font-size:12px;margin-top:12px">${t("notice")}</p></div>`;
 return`<div class="glass"><div class="acts" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0;align-self:center">${t("secure")} · ${files.length}</h2><button class="btn g s" data-a="lock">🔒 ${t("lockn")}</button></div>
@@ -172,6 +173,7 @@ ${files.length?files.map((f,i)=>`<div class="file"><div style="font-size:26px">$
 set:()=>`<div class="glass"><h2>${t("lang")}</h2><div class="acts"><button class="btn ${L==="bn"?"":"g"}" data-l="bn">বাংলা</button><button class="btn ${L==="en"?"":"g"}" data-l="en">English</button></div></div>
 <div class="glass"><h2>${t("theme")}</h2><div class="acts"><button class="btn g" data-th="light">☀️</button><button class="btn g" data-th="dark">🌙</button></div></div>
 <div class="glass"><h2>${t("exp")}</h2><p>${t("expd")}</p>${vault?`<button class="btn" data-a="export" style="margin-top:8px">⬇️ ${t("exp")}</button>`:""}</div>`};
+const ownOK=()=>{try{return isOwner(au&&au.currentUser)}catch(_){return false}};
 const pr=()=>(vault&&vault.profile)||PP||{},rv=(f,k)=>pr()[f]||T[L][k];
 const DE=[{id:"e1",deg:"BA / BSS",inst:"Bangladesh Open University · Abdul Hai Degree College, Narail Center",per:"Oct 2025 – Present"}];
 let dr=null;
@@ -378,7 +380,7 @@ async function cloudPull(){await W(async()=>{try{
  await pullFrom(r,m)}catch(e){alert(e.message)}})}
 const _s5=V.set;V.set=()=>{const u=au&&au.currentUser,ok=isOwner(u);
  const st=ok?"✅ "+esc(u.email)+(CS==="conflict"?" · ⚠️ "+B("ক্লাউডে নতুন ভল্ট আছে — Pull করুন","cloud has a newer vault — Pull"):CS==="ok"?" · ☁️ "+B("সিঙ্ক হয়েছে","synced"):""):B("সাইন-ইন করা নেই","Not signed in");
- return _s5()+`<div class="glass"><h2>🔑 ${B("মালিক সাইন-ইন","Owner sign-in")}</h2><p>${B("শুধু আপনার Google অ্যাকাউন্ট। অন্য কেউ ঢুকতে পারবে না (Owner only sign in)।","Your Google account only. Anyone else is blocked (Owner only sign in).")}</p><p>${st}</p><div class="acts">${ok?`<button class="btn" data-a="cpush">⬆ ${B("এখন সিঙ্ক","Sync now")}</button><button class="btn g" data-a="cpull">⬇ Pull</button><button class="btn g" data-a="gso">${B("সাইন-আউট","Sign out")}</button>`:`<button class="btn" data-a="gsi">Google ${B("দিয়ে সাইন-ইন","sign-in")}</button><button class="btn g" data-a="cpull">⬇ Pull</button>`}</div></div>`};
+ return _s5()+`<div class="glass"><h2>🔑 ${B("মালিক সাইন-ইন","Owner sign-in")}</h2><p>${B("শুধু আপনার Google অ্যাকাউন্ট। অন্য কেউ ঢুকতে পারবে না (Owner only sign in)।","Your Google account only. Anyone else is blocked (Owner only sign in).")}</p><p>${st}</p><div class="acts">${ok?`<button class="btn" data-a="cpush">⬆ ${B("এখন সিঙ্ক","Sync now")}</button><button class="btn g" data-a="cpull">⬇ Pull</button><button class="btn g" data-a="gso">${B("সাইন-আউট","Sign out")}</button>`:`<button class="btn" data-a="gsi">Google ${B("দিয়ে সাইন-ইন","sign-in")}</button>`}</div></div>`};
 document.addEventListener("click",async e=>{const x=e.target.closest('[data-a="gsi"],[data-a="gso"],[data-a="cpull"],[data-a="cpush"]');if(!x)return;const a=x.dataset.a;
  if(a==="gsi")await W(async()=>{try{if(!fbOn())return;await login();await autoSync();render()}catch(e){alert(e.message)}});
  else if(a==="gso"){try{if(au)await au.signOut()}catch(_){}CS="";render()}
