@@ -344,7 +344,6 @@ T.en.find="Finder";T.bn.find="কোথায়";SV.find=S('<circle cx="11" cy=
 V.find=()=>{if(!key)return V.docs();return`<div class="glass"><label class="fl">🔎<input id="q" placeholder="${B("কোন জিনিস খুঁজছেন?","Search an item")}"></label><div id="il">${fnd("")}</div></div><div class="glass"><h2>${B("নতুন জিনিস","New item")}</h2>${inp("i_n",B("জিনিসের নাম","Item"),"")}${inp("i_p",B("কোথায় রেখেছেন","Where it is"),"")}${inp("i_t",B("নোট (ঐচ্ছিক)","Note"),"")}<button class="btn" data-a="addi">${B("সেভ","Save")}</button></div>`};
 const pubdocs=()=>PUB.length?`<div class="glass"><h2>${B("পাবলিক ডকুমেন্ট","Public documents")}</h2>${PUB.map((p,i)=>`<div class="file"><div class="n">${esc(p.d.n)}</div><button class="btn g s" data-a="pv" data-i="${i}">${t("view")}</button></div>`).join("")}</div>`:"";
 const _pf=V.profile;V.profile=()=>editing?_pf():_pf()+cvbtn()+pubdocs();
-const _dd=V.docs;V.docs=()=>key?_dd():_dd()+`<div class="glass"><h2>${B("শেয়ার কোড আছে?","Have a share code?")}</h2><label class="fl"><input id="sc" placeholder="CODE"></label><button class="btn" data-a="getc">${B("খুলুন","Open")}</button></div>`;
 const _st=V.set;V.set=()=>_st()+(vault&&ownOK()?`<div class="glass"><h2>☁️ ${B("ক্লাউড","Cloud")}</h2><p>${B("প্রোফাইল পাবলিশ করলে সাইট খুললে যে কেউ দেখবে (রক্তের গ্রুপ ও জরুরি নম্বর বাদে)।","Publishing shows your profile to every visitor (blood group and emergency contact excluded).")}</p><button class="btn" data-a="pubp">☁️ ${B("প্রোফাইল পাবলিশ","Publish profile")}</button></div>`:"");
 document.addEventListener("input",e=>{if(e.target.id==="q"&&$("#il"))$("#il").innerHTML=fnd(e.target.value)});
 document.addEventListener("click",async e=>{const x=e.target.closest("[data-a]");if(!x)return;const a=x.dataset.a,i=+x.dataset.i;
@@ -570,5 +569,45 @@ document.addEventListener("visibilitychange",()=>{if(document.visibilityState===
 addEventListener("online",trySync);
 addEventListener("focus",trySync);
 setInterval(()=>{if(document.visibilityState==="visible")trySync()},20000);
+
+/* ---------- cover photo ---------- */
+document.head.insertAdjacentHTML("beforeend","<style>.cover{height:150px;border-radius:24px;background:var(--card) center/cover no-repeat;border:1px solid var(--bd);box-shadow:0 10px 40px rgba(0,0,0,.12)}.cover.empty{display:grid;place-items:center;color:var(--mut);font-size:13px}.cover.top{margin-bottom:14px}#cvblk{margin-bottom:14px}.hero.hascv{background-size:cover!important;background-position:center!important;border-color:rgba(255,255,255,.25)}.hero.hascv h1,.hero.hascv p,.hero.hascv .hi{color:#fff!important;text-shadow:0 2px 12px rgba(0,0,0,.55)}.hero.hascv .grad{background:none!important;-webkit-text-fill-color:#fff!important;color:#fff!important}.hero.hascv .pill{background:rgba(0,0,0,.45);color:#fff}</style>");
+const _se=startEdit;startEdit=function(){_se();if(dr){dr.cover=pr().cover||"";render()}};
+function coverEdit(){if(!(editing&&key&&dr&&tab==="profile")||$("#cvblk"))return;const ph=$("#ph"),row=ph&&ph.closest(".acts");if(!row)return;
+ row.insertAdjacentHTML("beforebegin",`<div id="cvblk"><div class="cover ${dr.cover?"":"empty"}" ${dr.cover?`style="background-image:url('${esc(dr.cover)}')"`:""}>${dr.cover?"":B("কভার ফটো নেই","No cover photo")}</div><div class="acts" style="justify-content:center;margin-top:8px"><label class="btn g s">🖼 ${B("কভার ফটো","Cover photo")}<input id="cvr" type="file" accept="image/*" hidden></label>${dr.cover?`<button class="btn g s" data-a="cvx">✕ ${B("সরান","Remove")}</button>`:""}</div></div>`)}
+function coverHero(){const c=pr().cover;document.querySelectorAll("#app .hero").forEach(h=>{if(c&&!editing){h.classList.add("hascv");h.style.backgroundImage=`linear-gradient(rgba(5,6,15,.35),rgba(5,6,15,.7)),url('${c}')`}else{h.classList.remove("hascv");h.style.backgroundImage=""}})}
+const _r2=render;render=function(){_r2.apply(this,arguments);try{coverEdit();coverHero()}catch(_){}};
+/* Facebook-style cover crop: drag to move, pinch / slider to zoom */
+let CR=null;
+async function cropOpen(file){
+ let bm;try{bm=await createImageBitmap(file,{imageOrientation:"from-image"})}catch(_){return alert(B("ছবি খোলা যায়নি","Can't open this image"))}
+ const M=2200,k0=Math.min(1,M/Math.max(bm.width,bm.height));
+ if(k0<1){const c=document.createElement("canvas");c.width=Math.round(bm.width*k0);c.height=Math.round(bm.height*k0);c.getContext("2d").drawImage(bm,0,0,c.width,c.height);if(bm.close)bm.close();bm=c}
+ const d=$("#dlg");d.className="vw";
+ d.innerHTML=`<div class="vh"><b>${B("কভার ঠিক করুন","Adjust cover")}</b><span class="acts"><button class="btn g s" data-a="cvno">${B("বাতিল","Cancel")}</button><button class="btn s" data-a="cvok">${B("সেভ","Save")}</button></div><div class="vb" id="cvw" style="display:grid;place-items:center;padding:12px"><canvas id="cvc" style="touch-action:none;border-radius:20px;box-shadow:0 10px 40px rgba(0,0,0,.35);cursor:grab"></canvas></div><div style="padding:12px 4px 4px"><input id="cvz" type="range" min="1" max="4" step="0.01" value="1" style="width:100%"><p style="text-align:center;font-size:12px;margin:6px 0 0">${B("টেনে সরান · দুই আঙুলে বা স্লাইডারে জুম করুন","Drag to move · pinch or use the slider to zoom")}</p></div>`;
+ d.showModal();
+ const w0=$("#cvw"),fw=Math.max(160,Math.min(w0.clientWidth-24,440,(w0.clientHeight-24)*1.2)),fh=Math.round(fw*5/6),cv=$("#cvc"),dp=Math.min(devicePixelRatio||1,2);
+ cv.style.width=fw+"px";cv.style.height=fh+"px";cv.width=Math.round(fw*dp);cv.height=Math.round(fh*dp);
+ const bw=bm.width,bh=bm.height,mn=Math.max(fw/bw,fh/bh);
+ CR={bm,fw,fh,mn,z:1,ox:(fw-bw*mn)/2,oy:(fh-bh*mn)/2,P:new Map()};
+ const draw=()=>{const g=cv.getContext("2d"),s=CR.mn*CR.z;g.setTransform(dp,0,0,dp,0,0);g.fillStyle="#000";g.fillRect(0,0,fw,fh);g.drawImage(bm,CR.ox,CR.oy,bw*s,bh*s)};
+ const clamp=()=>{const s=CR.mn*CR.z;CR.ox=Math.min(0,Math.max(fw-bw*s,CR.ox));CR.oy=Math.min(0,Math.max(fh-bh*s,CR.oy))};
+ const zoomTo=(z,cx,cy)=>{z=Math.max(1,Math.min(4,z));const s0=CR.mn*CR.z,s1=CR.mn*z;CR.ox=cx-(cx-CR.ox)*s1/s0;CR.oy=cy-(cy-CR.oy)*s1/s0;CR.z=z;clamp();$("#cvz").value=z;draw()};
+ CR.draw=draw;draw();
+ const pos=e=>{const r=cv.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top]};
+ let last=0;
+ cv.onpointerdown=e=>{cv.setPointerCapture(e.pointerId);CR.P.set(e.pointerId,pos(e));last=0;cv.style.cursor="grabbing"};
+ cv.onpointermove=e=>{if(!CR.P.has(e.pointerId))return;const o=CR.P.get(e.pointerId),n=pos(e);
+  if(CR.P.size===1){CR.ox+=n[0]-o[0];CR.oy+=n[1]-o[1];clamp();draw()}
+  else if(CR.P.size===2){const ids=[...CR.P.keys()],a=CR.P.get(ids[0]),b=CR.P.get(ids[1]),d0=Math.hypot(a[0]-b[0],a[1]-b[1]);CR.P.set(e.pointerId,n);const a2=CR.P.get(ids[0]),b2=CR.P.get(ids[1]),d1=Math.hypot(a2[0]-b2[0],a2[1]-b2[1]);if(d0>0)zoomTo(CR.z*d1/d0,(a2[0]+b2[0])/2,(a2[1]+b2[1])/2);return}
+  CR.P.set(e.pointerId,n)};
+ cv.onpointerup=cv.onpointercancel=e=>{CR.P.delete(e.pointerId);cv.style.cursor="grab"};
+ cv.onwheel=e=>{e.preventDefault();const p=pos(e);zoomTo(CR.z*(e.deltaY<0?1.1:.91),p[0],p[1])};
+ $("#cvz").oninput=e=>zoomTo(+e.target.value,fw/2,fh/2)}
+document.addEventListener("change",async e=>{const x=e.target;if(x.id!=="cvr"||!x.files[0]||!dr)return;collect();const f=x.files[0];x.value="";await cropOpen(f)});
+document.addEventListener("click",e=>{const x=e.target.closest('[data-a="cvok"],[data-a="cvno"]');if(!x)return;
+ if(x.dataset.a==="cvok"&&CR&&dr){const W=1200,H=1000,k=W/CR.fw,s=CR.mn*CR.z,c=document.createElement("canvas");c.width=W;c.height=H;c.getContext("2d").drawImage(CR.bm,CR.ox*k,CR.oy*k,CR.bm.width*s*k,CR.bm.height*s*k);dr.cover=c.toDataURL("image/jpeg",.82)}
+ CR=null;$("#dlg").close();render()});
+document.addEventListener("click",e=>{const x=e.target.closest('[data-a="cvx"]');if(!x||!dr)return;collect();dr.cover="";render()});
 })();
 </script></body></html>
