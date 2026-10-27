@@ -135,11 +135,12 @@ async function dbGet(){try{const d=await idb();return await new Promise(r=>{cons
 async function dbSet(v){try{const d=await idb();d.transaction("s","readwrite").objectStore("s").put(v,"v")}catch(e){}}
 const persist=()=>{vault.files=files.map(f=>f.s);vault.ts=Date.now();const p=dbSet(vault);schedPush();return p};
 /* vault ops */
+let UI={};
 async function create(pw){const salt=crypto.getRandomValues(new Uint8Array(16));key=await derive(pw,salt);vault={salt:b64(salt),check:await seal(key,{ok:1}),files:[]};files=[];await persist()}
-async function unlock(pw){const k=await derive(pw,unb(vault.salt));await open(k,vault.check);const out=[];for(const s of vault.files)out.push({s,d:await open(k,s)});key=k;files=out;IT=vault.it?await open(k,vault.it):[];QS=vault.qs?await open(k,vault.qs):[];FM=vault.fm?await open(k,vault.fm):[]}
+async function unlock(pw){const k=await derive(pw,unb(vault.salt));await open(k,vault.check);const out=[];for(const s of vault.files)out.push({s,d:await open(k,s)});key=k;files=out;IT=vault.it?await open(k,vault.it):[];QS=vault.qs?await open(k,vault.qs):[];FM=vault.fm?await open(k,vault.fm):[];UI=vault.uis?await open(k,vault.uis):{}}
 function lock(){key=null;files=[];IT=[];QS=[];FM=[];clearTimeout(timer);render()}
 function touch(){clearTimeout(timer);if(key)timer=setTimeout(lock,LK)}
-async function addFiles(list){busy=true;render();for(const f of list){const d={n:f.name,t:f.type||"application/octet-stream",z:f.size,b:b64(await f.arrayBuffer()),k:cat};files.push({d,s:await seal(key,d)})}await persist();busy=false;touch();render()}
+async function addFiles(list){busy=true;render();for(const f0 of list){const f=await window.shrink(f0);const d={n:f.name,t:f.type||"application/octet-stream",z:f.size,b:b64(await f.arrayBuffer()),k:cat};files.push({d,s:await seal(key,d)})}await persist();busy=false;touch();render()}
 const blobOf=f=>new Blob([unb(f.d.b)],{type:f.d.t});
 async function download(f){const bl=blobOf(f);try{const d=window.claude&&await claude.use("downloads");if(d){await d.save({filename:f.d.n,data:bl});return}}catch(e){}const a=document.createElement("a");a.href=URL.createObjectURL(bl);a.download=f.d.n;document.body.appendChild(a);a.click();a.remove()}
 let LP;function preview(f){LP=f;const bl=blobOf(f),u=URL.createObjectURL(bl);let h="";
@@ -200,19 +201,19 @@ Object.assign(T.bn,{c_pass:"পাসপোর্ট",c_visa:"ভিসা",c_ni
 Object.assign(T.en,{c_license:"Driving License",c_birth:"Birth Certificate",c_bank:"Bank",c_medical:"Medical",xdate:"Expiry date",expired:"Expired",dleft:"days left"});
 Object.assign(T.bn,{c_license:"ড্রাইভিং লাইসেন্স",c_birth:"জন্মনিবন্ধন",c_bank:"ব্যাংক",c_medical:"মেডিকেল",xdate:"মেয়াদ শেষের তারিখ",expired:"মেয়াদ শেষ",dleft:"দিন বাকি"});
 const nd=f=>Math.ceil((new Date(f.d.x)-Date.now())/864e5);
-const bdg=f=>{if(!f.d.x)return"";const n=nd(f);return`<b class="bg ${n<90?"r":""}">${n<0?t("expired"):bn(n)+" "+t("dleft")}</b>`};
-const warn=()=>{const s=files.filter(f=>f.d.x&&nd(f)<90);return s.length?`<div class="warn">⏰ ${s.map(f=>esc(f.d.n)+" · "+(nd(f)<0?t("expired"):bn(nd(f))+" "+t("dleft"))).join("<br>")}</div>`:""};
+const bdg=f=>{if(!f.d.x)return"";const n=nd(f);return`<b class="bg ${n<=30?"r":n<=60?"o":n<=90?"y":""}">${n<0?t("expired"):bn(n)+" "+t("dleft")}</b>`};
+const warn=()=>{const s=files.filter(f=>f.d.x&&nd(f)<=90).sort((a,b)=>nd(a)-nd(b));return s.length?`<div class="warn"><b>⏰ ${B("মেয়াদ শেষের সতর্কতা","Expiry alerts")}</b>${s.map(f=>{const n=nd(f);return`<div class="wl ${n<=30?"r":n<=60?"o":"y"}"><span>${n<0?"⛔":n<=30?"🔴":n<=60?"🟠":"🟡"} ${esc(f.d.n)}</span><b>${n<0?t("expired"):bn(n)+" "+t("dleft")}</b></div>`}).join("")}</div>`:""};
 const dx=(f,i)=>`<div class="xr"><label>${t("xdate")} <input type="date" class="ex" data-ei="${i}" value="${esc(f.d.x||"")}"></label>${bdg(f)}</div>`;
 let cat=null;
 const CK=[["pass","🛂","linear-gradient(135deg,#5b5bff,#8d6bff)"],["visa","✈️","linear-gradient(135deg,#00c2a8,#00b8ff)"],["nid","🪪","linear-gradient(135deg,#ff7a45,#ff3d71)"],["cert","🎓","linear-gradient(135deg,#f5b400,#ff7a45)"],["license","🚗","linear-gradient(135deg,#22c55e,#16a34a)"],["birth","📄","linear-gradient(135deg,#ec4899,#a855f7)"],["citizen","📜","linear-gradient(135deg,#f59e0b,#dc2626)"],["marriage","💍","linear-gradient(135deg,#f472b6,#e11d48)"],["bank","🏦","linear-gradient(135deg,#0ea5e9,#2563eb)"],["medical","🏥","linear-gradient(135deg,#f43f5e,#be123c)"],["cv","📄","linear-gradient(135deg,#14b8a6,#0d9488)"],["other","📁","linear-gradient(135deg,#6b7280,#374151)"],["family","👨‍👩‍👧‍👦","linear-gradient(135deg,#8b5cf6,#06b6d4)"]];
 const fk=f=>f.d.k||(f.d.e?"cert":"other");
 const _d=V.docs;V.docs=()=>{if(!vault||!key)return _d();
 const bar=`<div class="acts" style="justify-content:space-between;margin-bottom:12px"><h2 style="margin:0;align-self:center">${t("secure")} · ${files.length}</h2><button class="btn g s" data-a="lock">🔒 ${t("lockn")}</button></div>`;
-if(!cat)return`<div class="glass">${bar}${warn()}<div class="cg">${CK.map(([k,i,bg])=>`<button class="cc" data-cat="${k}"><div class="ic" style="background:${bg};font-size:28px">${i}</div><b>${t("c_"+k)}</b><small>${files.filter(f=>fk(f)===k).length}</small></button>`).join("")}</div><p style="font-size:12px;margin-top:12px">${t("auto")}</p></div>`;
-const ls=files.map((f,i)=>[f,i]).filter(([f])=>fk(f)===cat),c=CK.find(q=>q[0]===cat);
-return`<div class="glass">${bar}<button class="btn g s" data-cat="">← ${t("back")}</button><h1 style="margin:14px 0 4px">${c[1]} ${t("c_"+cat)}</h1><label class="fl"><input id="ds" placeholder="🔎 ${B("খুঁজুন","Search")}"></label><label class="btn" style="display:block;text-align:center;margin:12px 0">${busy?t("busy"):t("add")}<input id="up" type="file" multiple hidden></label>${ls.length?ls.map(([f,i])=>`<div class="file"><div style="font-size:26px">${f.d.t.startsWith("image/")?"🖼️":f.d.t.includes("pdf")?"📕":"📄"}</div><div class="n">${esc(f.d.n)}<small>${(f.d.z/1024).toFixed(0)} KB${f.d.sh?" · 🔗 "+esc(f.d.sh.c||f.d.sh):""}${f.d.pub?" · 🌐":""}</small></div><div class="acts"><button class="btn g s" data-v="${i}">${t("view")}</button><button class="btn g s" data-d="${i}">${t("dl")}</button><button class="btn g s" data-a="pubt" data-i="${i}">🌐${f.d.pub?"✓":""}</button><button class="btn g s" data-a="shr" data-i="${i}">🔗${f.d.sh?"✓":""}</button><button class="btn r s" data-x="${i}">✕</button></div></div>${dx(f,i)}`).join(""):`<p>${t("empty")}</p>`}</div>`};Object.assign(T.en,{emg:"Emergency",blood:"Blood group",ecn:"Emergency contact name",ecp:"Emergency contact phone",links:"Links (one per line, https://…)",linkh:"Links",share:"Share profile (QR)",qrt:"Scan to open this profile",newpw:"New password",chpw:"Change vault password",done:"✓ Done"});
+if(!cat)return`<div class="glass">${bar}${warn()}${window.gridHTML()}</div>`;
+const ls=files.map((f,i)=>[f,i]).filter(([f])=>fk(f)===cat),c=window.CCF(cat);
+return`<div class="glass">${bar}<button class="btn g s" data-cat="">← ${t("back")}</button><h1 style="margin:14px 0 4px">${c[1]} ${esc(window.CN(cat))}</h1><label class="fl"><input id="ds" placeholder="🔎 ${B("খুঁজুন","Search")}"></label><label class="btn" style="display:block;text-align:center;margin:12px 0">${busy?t("busy"):t("add")}<input id="up" type="file" multiple hidden></label><label class="btn g" style="display:block;text-align:center;margin:0 0 12px">📷 ${B("ক্যামেরায় স্ক্যান","Scan with camera")}<input id="cam" type="file" accept="image/*" capture="environment" hidden></label>${ls.length>1?`<p class="hnt">☝️ ${B("ফাইল চেপে ধরে টেনে ক্রম বদলান","Press & hold a file, then drag to reorder")}</p>`:""}${ls.length?'<div class="fls">'+ls.map(([f,i])=>`<div class="fw" data-fi="${i}"><div class="file"><div style="font-size:26px">${f.d.t.startsWith("image/")?"🖼️":f.d.t.includes("pdf")?"📕":"📄"}</div><div class="n">${esc(f.d.n)}<small>${(f.d.z/1024).toFixed(0)} KB${f.d.sh?" · 🔗 "+esc(f.d.sh.c||f.d.sh):""}${f.d.pub?" · 🌐":""}</small></div><div class="acts"><button class="btn g s" data-v="${i}">${t("view")}</button><button class="btn g s" data-d="${i}">${t("dl")}</button><button class="btn g s" data-a="pubt" data-i="${i}">🌐${f.d.pub?"✓":""}</button><button class="btn g s" data-a="shr" data-i="${i}">🔗${f.d.sh?"✓":""}</button><button class="btn r s" data-x="${i}">✕</button></div></div>${dx(f,i)}</div>`).join("")+"</div>":`<p>${t("empty")}</p>`}</div>`};Object.assign(T.en,{emg:"Emergency",blood:"Blood group",ecn:"Emergency contact name",ecp:"Emergency contact phone",links:"Links (one per line, https://…)",linkh:"Links",share:"Share profile (QR)",qrt:"Scan to open this profile",newpw:"New password",chpw:"Change vault password",done:"✓ Done"});
 Object.assign(T.bn,{emg:"জরুরি যোগাযোগ",blood:"রক্তের গ্রুপ",ecn:"জরুরি যোগাযোগের নাম",ecp:"জরুরি যোগাযোগের ফোন",links:"লিংক (এক লাইনে একটা, https://…)",linkh:"লিংক",share:"প্রোফাইল শেয়ার (QR)",qrt:"স্ক্যান করলে প্রোফাইল খুলবে",newpw:"নতুন পাসওয়ার্ড",chpw:"ভল্টের পাসওয়ার্ড বদলান",done:"✓ সম্পন্ন"});
-async function chpw(pw){const salt=crypto.getRandomValues(new Uint8Array(16)),k=await derive(pw,salt),nf=[];for(const f of files)nf.push({d:f.d,s:await seal(k,f.d)});key=k;files=nf;vault.it=await seal(k,IT);vault.qs=await seal(k,QS);vault.fm=await seal(k,FM);vault.salt=b64(salt);vault.check=await seal(k,{ok:1});await persist()}
+async function chpw(pw){const salt=crypto.getRandomValues(new Uint8Array(16)),k=await derive(pw,salt),nf=[];for(const f of files)nf.push({d:f.d,s:await seal(k,f.d)});key=k;files=nf;vault.it=await seal(k,IT);vault.qs=await seal(k,QS);vault.fm=await seal(k,FM);vault.uis=await seal(k,UI);vault.salt=b64(salt);vault.check=await seal(k,{ok:1});await persist()}
 const pwCard=()=>key?`<div class="glass"><h2>${t("chpw")}</h2><input id="np" type="password" placeholder="${t("newpw")}" autocomplete="new-password"><div class="err">${msg}</div><button class="btn" data-a="chpw">${busy?t("busy"):t("chpw")}</button></div>`:"";
 const emerg=()=>{const p=pr();if(!p.blood&&!p.ecp)return"";return`<div class="glass sos"><h2>🚨 ${t("emg")}</h2>${p.blood?row(t("blood"),`<b style="color:#ff6369;font-size:20px">${esc(p.blood)}</b>`):""}${p.ecn?row(t("ecn"),esc(p.ecn)):""}${p.ecp?`<a class="btn r" style="margin-top:10px" href="tel:${esc(p.ecp.replace(/[^\d+]/g,""))}">📞 ${esc(p.ecp)}</a>`:""}</div>`};
 const links=()=>{const a=(pr().links||"").split(/\s+/).filter(u=>/^https?:\/\//i.test(u));return a.length?`<div class="glass"><h2>${t("linkh")}</h2><div class="chips">${a.map(u=>{let h=u;try{h=new URL(u).hostname.replace("www.","")}catch(_){}return`<a href="${esc(u)}" target="_blank" rel="noopener">🔗 ${esc(h)}</a>`}).join("")}</div></div>`:""};
@@ -277,7 +278,7 @@ V.docs=()=>{
   return`<div class="glass">${bar}<button class="btn g s" data-cat="">← ${t("back")}</button><h1 style="margin:14px 0 4px">👨‍👩‍👧‍👦 ${t("c_family")}</h1><p style="font-size:13px">${B("নাম লিখে সদস্য যোগ করুন, তারপর তার NID/ডকুমেন্টের ফাইল রাখুন।","Add a person by name, then keep their NID/documents under it.")}</p><label class="fl"><input id="fm_n" placeholder="${B("নাম লিখুন (যেমন: বাবা, স্ত্রী, ছেলের নাম)","Name (e.g. Father, Wife, child's name)")}"></label><div class="acts" style="margin:8px 0">${chips}</div><button class="btn" data-a="addm">+ ${B("সদস্য যোগ","Add person")}</button><div style="margin-top:14px">${FM.length?FM.map(m=>`<div class="file"><div style="font-size:26px">👤</div><div class="n">${esc(m.n)}<small>${files.filter(f=>fk(f)==="f:"+m.id).length} ${B("টি ফাইল","files")}</small></div><div class="acts"><button class="btn g s" data-cat="f:${m.id}">${B("খুলুন","Open")}</button><button class="btn r s" data-a="delm" data-m="${m.id}">✕</button></div></div>`).join(""):`<p>${t("empty")}</p>`}</div></div>`}
  const m=fmOf(cat);if(!m){cat="family";return V.docs()}
  const ls=files.map((f,i)=>[f,i]).filter(([f])=>fk(f)===cat);
- return`<div class="glass">${bar}<button class="btn g s" data-cat="family">← ${t("back")}</button><h1 style="margin:14px 0 4px">👤 ${esc(m.n)}</h1><label class="btn" style="display:block;text-align:center;margin:12px 0">${busy?t("busy"):t("add")}<input id="up" type="file" multiple hidden></label>${ls.length?ls.map(([f,i])=>`<div class="file"><div style="font-size:26px">${f.d.t.startsWith("image/")?"🖼️":f.d.t.includes("pdf")?"📕":"📄"}</div><div class="n">${esc(f.d.n)}<small>${(f.d.z/1024).toFixed(0)} KB${f.d.sh?" · 🔗 "+esc(f.d.sh.c||f.d.sh):""}${f.d.pub?" · 🌐":""}</small></div><div class="acts"><button class="btn g s" data-v="${i}">${t("view")}</button><button class="btn g s" data-d="${i}">${t("dl")}</button><button class="btn g s" data-a="pubt" data-i="${i}">🌐${f.d.pub?"✓":""}</button><button class="btn g s" data-a="shr" data-i="${i}">🔗${f.d.sh?"✓":""}</button><button class="btn r s" data-x="${i}">✕</button></div></div>${dx(f,i)}`).join(""):`<p>${t("empty")}</p>`}</div>`};
+ return`<div class="glass">${bar}<button class="btn g s" data-cat="family">← ${t("back")}</button><h1 style="margin:14px 0 4px">👤 ${esc(m.n)}</h1><label class="btn" style="display:block;text-align:center;margin:12px 0">${busy?t("busy"):t("add")}<input id="up" type="file" multiple hidden></label><label class="btn g" style="display:block;text-align:center;margin:0 0 12px">📷 ${B("ক্যামেরায় স্ক্যান","Scan with camera")}<input id="cam" type="file" accept="image/*" capture="environment" hidden></label>${ls.length>1?`<p class="hnt">☝️ ${B("ফাইল চেপে ধরে টেনে ক্রম বদলান","Press & hold a file, then drag to reorder")}</p>`:""}${ls.length?'<div class="fls">'+ls.map(([f,i])=>`<div class="fw" data-fi="${i}"><div class="file"><div style="font-size:26px">${f.d.t.startsWith("image/")?"🖼️":f.d.t.includes("pdf")?"📕":"📄"}</div><div class="n">${esc(f.d.n)}<small>${(f.d.z/1024).toFixed(0)} KB${f.d.sh?" · 🔗 "+esc(f.d.sh.c||f.d.sh):""}${f.d.pub?" · 🌐":""}</small></div><div class="acts"><button class="btn g s" data-v="${i}">${t("view")}</button><button class="btn g s" data-d="${i}">${t("dl")}</button><button class="btn g s" data-a="pubt" data-i="${i}">🌐${f.d.pub?"✓":""}</button><button class="btn g s" data-a="shr" data-i="${i}">🔗${f.d.sh?"✓":""}</button><button class="btn r s" data-x="${i}">✕</button></div></div>${dx(f,i)}</div>`).join("")+"</div>":`<p>${t("empty")}</p>`}</div>`};
 document.addEventListener("click",async e=>{const x=e.target.closest('[data-a="addm"],[data-a="delm"],[data-a="fmfill"]');if(!x)return;const a=x.dataset.a;
  if(a==="fmfill"){const i=document.getElementById("fm_n");if(i){i.value=x.dataset.n;i.focus()}return}
  if(a==="addm"){const i=document.getElementById("fm_n"),n=((i&&i.value)||"").trim();if(!n||!key)return;FM.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),n});await saveFM();render();return}
@@ -345,6 +346,201 @@ V.find=()=>{if(!key)return V.docs();return`<div class="glass"><label class="fl">
 const pubdocs=()=>PUB.length?`<div class="glass"><h2>${B("পাবলিক ডকুমেন্ট","Public documents")}</h2>${PUB.map((p,i)=>`<div class="file"><div class="n">${esc(p.d.n)}</div><button class="btn g s" data-a="pv" data-i="${i}">${t("view")}</button></div>`).join("")}</div>`:"";
 const _pf=V.profile;V.profile=()=>editing?_pf():_pf()+cvbtn()+pubdocs();
 const _st=V.set;V.set=()=>_st()+(vault&&ownOK()?`<div class="glass"><h2>☁️ ${B("ক্লাউড","Cloud")}</h2><p>${B("প্রোফাইল পাবলিশ করলে সাইট খুললে যে কেউ দেখবে (রক্তের গ্রুপ ও জরুরি নম্বর বাদে)।","Publishing shows your profile to every visitor (blood group and emergency contact excluded).")}</p><button class="btn" data-a="pubp">☁️ ${B("প্রোফাইল পাবলিশ","Publish profile")}</button></div>`:"");
+(function(){
+const st=document.createElement("style");st.textContent=`
+.cc{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;position:relative}
+.fw .file{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.cc.dg,.fw.dg{opacity:.25}
+.cc.hid{opacity:.45}.cc .ed{position:absolute;top:6px;right:8px;font-size:13px}
+.ckg{position:fixed!important;z-index:99998;pointer-events:none;margin:0!important;opacity:.96;transform:scale(1.04);box-shadow:0 14px 34px rgba(0,0,0,.5);transition:none;background:rgba(30,35,60,.92);border-radius:16px}
+.wl{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid rgba(255,255,255,.1);font-size:13px}
+.wl.r b{color:#ff6369}.wl.o b{color:#ffa94d}.wl.y b{color:#ffd43b}
+.bg.o{color:#ffa94d}.bg.y{color:#ffd43b}
+.hnt{font-size:12px;opacity:.8;margin:6px 0}
+.sws{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.sws button{width:34px;height:34px;border-radius:50%;border:2px solid transparent;cursor:pointer}.sws button.on{border-color:#fff}
+.ejs{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}.ejs button{font-size:22px;background:transparent;border:0;padding:4px;cursor:pointer}`;
+document.head.appendChild(st);
+
+/* ---------- UI settings (encrypted in vault, synced) ---------- */
+const U=()=>(UI&&typeof UI==="object")?UI:(UI={});
+async function saveUI(){if(!key||!vault)return;vault.uis=await seal(key,U());await persist()}
+const catAll=()=>{const u=U(),ov=u.ov||{},cu=u.cats||[];
+ const a=CK.map(([k,i,bg])=>({k,i:(ov[k]&&ov[k].i)||i,bg:(ov[k]&&ov[k].bg)||bg,n:(ov[k]&&ov[k].n)||"",b:1}));
+ cu.forEach(c=>a.push({k:c.k,i:c.i,bg:c.bg,n:c.n,b:0}));
+ const o=u.ord||[],ix=k=>{const n=o.indexOf(k);return n<0?999:n};
+ return a.map((c,j)=>[c,j]).sort((x,y)=>ix(x[0].k)-ix(y[0].k)||x[1]-y[1]).map(x=>x[0])};
+const CNm=c=>c.n||t("c_"+c.k);
+window.CN=k=>{if((k||"").startsWith("f:")){const m=FM.find(q=>"f:"+q.id===k);return m?m.n:"👤"}const c=catAll().find(q=>q.k===k);return c?CNm(c):String(k)};
+window.CCF=k=>{const c=catAll().find(q=>q.k===k);return c?[c.k,c.i,c.bg]:[k,"📁","linear-gradient(135deg,#6b7280,#374151)"]};
+let editT=false,CE=null;
+window.gridHTML=()=>{
+ const hid=U().hid||[],all=catAll(),vis=editT?all:all.filter(c=>!hid.includes(c.k));
+ const tiles=vis.map(c=>`<button class="cc${hid.includes(c.k)?" hid":""}" data-cat="${esc(c.k)}"><div class="ic" style="background:${c.bg};font-size:28px">${esc(c.i)}</div><b>${esc(CNm(c))}</b><small>${files.filter(f=>fk(f)===c.k).length}</small>${editT?'<span class="ed">✏️</span>':""}</button>`).join("");
+ return `<label class="fl"><input id="gs" placeholder="🔎 ${B("সব ডকুমেন্টে খুঁজুন","Search all documents")}"></label><div id="gr"></div><div id="gw"><div class="cg">${tiles}</div><div class="acts" style="margin-top:12px"><button class="btn g s" data-a="x_edt">${editT?"✓ "+B("সম্পন্ন","Done"):"✏️ "+B("টাইল এডিট","Edit tiles")}</button>${editT?`<button class="btn g s" data-a="x_newc">＋ ${B("নতুন ক্যাটাগরি","New category")}</button>`:""}<button class="btn g s" data-a="ckr">↺ ${B("ক্রম রিসেট","Reset order")}</button></div><p class="hnt">☝️ ${B("টাইল চেপে ধরে টেনে সাজান","Press & hold a tile, then drag to rearrange")}</p><p style="font-size:12px;margin-top:6px">${t("auto")}</p></div>`};
+
+const SWS=["linear-gradient(135deg,#5b5bff,#8d6bff)","linear-gradient(135deg,#00c2a8,#00b8ff)","linear-gradient(135deg,#ff7a45,#ff3d71)","linear-gradient(135deg,#f5b400,#ff7a45)","linear-gradient(135deg,#22c55e,#16a34a)","linear-gradient(135deg,#ec4899,#a855f7)","linear-gradient(135deg,#0ea5e9,#2563eb)","linear-gradient(135deg,#f43f5e,#be123c)","linear-gradient(135deg,#14b8a6,#0d9488)","linear-gradient(135deg,#6b7280,#374151)"];
+const EJ=["📁","📄","🪪","🛂","🎓","🏠","🚗","💼","🏦","🏥","📜","🧾","💳","🛡️","📚","✈️","👪","🐾","🔑","💡"];
+function openCE(k){
+ const c=k?catAll().find(q=>q.k===k):null;
+ if(k&&!c)return;
+ CE={k:k||"",isNew:!k,bg:c?c.bg:SWS[0],b:c?c.b:0};
+ const hid=(U().hid||[]).includes(k),d=$("#dlg");
+ d.innerHTML=`<div class="acts" style="justify-content:space-between;margin-bottom:10px"><b>${k?B("টাইল এডিট","Edit tile"):B("নতুন ক্যাটাগরি","New category")}</b><button class="btn g s" data-a="close">${t("close")}</button></div>
+<label class="fl"><input id="ce_n" placeholder="${B("নাম","Name")}" value="${esc(c?CNm(c):"")}"></label>
+<label class="fl"><input id="ce_i" maxlength="8" placeholder="${B("ইমোজি","Emoji")}" value="${esc(c?c.i:"📁")}"></label>
+<div class="ejs">${EJ.map(e=>`<button data-a="x_ej" data-e="${e}">${e}</button>`).join("")}</div>
+<div class="sws">${SWS.map((g,j)=>`<button data-a="x_sw" data-j="${j}" class="${g===CE.bg?"on":""}" style="background:${g}"></button>`).join("")}</div>
+${k?`<label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" id="ce_h" ${hid?"checked":""} style="width:auto"> ${B("এই টাইল লুকান","Hide this tile")}</label>`:""}
+<div class="acts"><button class="btn" data-a="x_cs">${B("সেভ","Save")}</button>${k&&c&&!c.b?`<button class="btn r" data-a="x_cd">${B("ডিলিট","Delete")}</button>`:""}${k&&c&&c.b&&U().ov&&U().ov[k]?`<button class="btn g" data-a="x_cr">${B("ডিফল্ট","Reset")}</button>`:""}</div>`;
+ d.showModal()}
+async function ceSave(){
+ const n=(($("#ce_n")||{}).value||"").trim(),i=(($("#ce_i")||{}).value||"").trim()||"📁",u=U();
+ if(CE.isNew&&!n)return alert(B("নাম দিন","Enter a name"));
+ if(CE.isNew){u.cats=u.cats||[];u.cats.push({k:"u"+Date.now().toString(36),n,i,bg:CE.bg})}
+ else if(CE.b){u.ov=u.ov||{};u.ov[CE.k]={n:(n&&n!==t("c_"+CE.k))?n:"",i,bg:CE.bg}}
+ else{const c=(u.cats||[]).find(q=>q.k===CE.k);if(c){c.n=n||c.n;c.i=i;c.bg=CE.bg}}
+ const h=document.getElementById("ce_h");
+ if(h&&!CE.isNew){u.hid=(u.hid||[]).filter(x=>x!==CE.k);if(h.checked)u.hid.push(CE.k)}
+ await saveUI();$("#dlg").close();render()}
+async function ceDel(){
+ const k=CE.k;if(!confirm(B("ক্যাটাগরি মুছবেন? এর ফাইলগুলো 'অন্যান্য'-এ যাবে।","Delete this category? Its files move to Others.")))return;
+ for(const f of files)if(fk(f)===k){f.d.k="other";f.s=await seal(key,f.d)}
+ const u=U();u.cats=(u.cats||[]).filter(c=>c.k!==k);u.ord=(u.ord||[]).filter(x=>x!==k);u.hid=(u.hid||[]).filter(x=>x!==k);
+ if(cat===k)cat=null;await saveUI();$("#dlg").close();render()}
+
+/* ---------- image shrink + camera ---------- */
+window.shrink=async f=>{try{
+ if(!/^image\/(jpeg|png|webp)/i.test(f.type||"")&&!/\.(jpe?g|png|webp)$/i.test(f.name||""))return f;
+ if(f.size<400*1024)return f;
+ const bm=await createImageBitmap(f,{imageOrientation:"from-image"});
+ const sc=Math.min(1,1800/Math.max(bm.width,bm.height)),c=document.createElement("canvas");
+ c.width=Math.round(bm.width*sc);c.height=Math.round(bm.height*sc);
+ const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,c.width,c.height);x.drawImage(bm,0,0,c.width,c.height);
+ const bl=await new Promise(r=>c.toBlob(r,"image/jpeg",.82));
+ if(!bl||bl.size>=f.size)return f;
+ return new File([bl],(f.name||"image").replace(/\.\w+$/,"")+".jpg",{type:"image/jpeg"})
+}catch(_){return f}};
+document.addEventListener("change",async e=>{
+ if(e.target.id!=="cam")return;const l=[...e.target.files];e.target.value="";if(!l.length||!key)return;
+ const d=new Date(),p=n=>String(n).padStart(2,"0"),sp=""+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+"_"+p(d.getHours())+p(d.getMinutes());
+ await addFiles(l.map((f,j)=>new File([f],"Scan_"+sp+(l.length>1?"_"+(j+1):"")+".jpg",{type:f.type||"image/jpeg"})))});
+
+/* ---------- global search ---------- */
+document.addEventListener("input",e=>{
+ if(e.target.id!=="gs")return;
+ const v=e.target.value.trim().toLowerCase(),gr=document.getElementById("gr"),gw=document.getElementById("gw");if(!gr||!gw)return;
+ if(!v){gr.innerHTML="";gw.style.display="";return}
+ gw.style.display="none";
+ const m=files.map((f,i)=>[f,i]).filter(([f])=>(f.d.n||"").toLowerCase().includes(v)||window.CN(fk(f)).toLowerCase().includes(v));
+ gr.innerHTML=m.length?m.map(([f,i])=>`<div class="file"><div style="font-size:26px">${f.d.t.startsWith("image/")?"🖼️":f.d.t.includes("pdf")?"📕":"📄"}</div><div class="n">${esc(f.d.n)}<small>${esc(window.CN(fk(f)))} · ${(f.d.z/1024).toFixed(0)} KB</small></div><div class="acts"><button class="btn g s" data-v="${i}">${t("view")}</button><button class="btn g s" data-d="${i}">${t("dl")}</button><button class="btn g s" data-cat="${esc(fk(f))}">📂</button></div></div>`).join(""):`<p>${B("কিছু পাওয়া যায়নি","Nothing found")}</p>`});
+
+/* ---------- drag to reorder (tiles + files) ---------- */
+let tm=null,drag=null,sx=0,sy=0,block=0,raf=0;
+document.addEventListener("contextmenu",e=>{if(e.target.closest&&e.target.closest(".cc,.fw")&&!e.target.closest("input,textarea"))e.preventDefault()});
+document.addEventListener("pointerdown",e=>{
+ const el=e.target;if(!el.closest)return;
+ const it=el.closest(".cc")||(!el.closest("button,input,a,label,select,textarea")?el.closest(".fw"):null);
+ if(!it||!it.parentElement||!(it.parentElement.classList.contains("cg")||it.parentElement.classList.contains("fls"))||(e.pointerType==="mouse"&&e.button!==0))return;
+ sx=e.clientX;sy=e.clientY;clearTimeout(tm);
+ tm=setTimeout(()=>dStart(it,e.clientX,e.clientY),e.pointerType==="mouse"?250:420)});
+function dStart(it,x,y){
+ tm=null;if(!it.isConnected)return;const r=it.getBoundingClientRect();
+ const g=it.cloneNode(true);g.classList.add("ckg");g.style.width=r.width+"px";g.style.height=r.height+"px";g.style.left=r.left+"px";g.style.top=r.top+"px";
+ document.body.appendChild(g);it.classList.add("dg");
+ drag={t:it,g,ox:x-r.left,oy:y-r.top,x,y,moved:false,sel:it.classList.contains("cc")?".cc":".fw"};
+ try{navigator.vibrate&&navigator.vibrate(25)}catch(_){}
+ dLoop()}
+document.addEventListener("pointermove",e=>{
+ if(tm&&Math.hypot(e.clientX-sx,e.clientY-sy)>10){clearTimeout(tm);tm=null}
+ if(!drag)return;
+ drag.x=e.clientX;drag.y=e.clientY;
+ drag.g.style.left=(e.clientX-drag.ox)+"px";drag.g.style.top=(e.clientY-drag.oy)+"px";
+ const el=document.elementFromPoint(e.clientX,e.clientY),o=el&&el.closest&&el.closest(drag.sel);
+ if(o&&o!==drag.t&&o.parentElement===drag.t.parentElement){
+  const r=o.getBoundingClientRect();
+  if(e.clientX>r.left+r.width*.2&&e.clientX<r.right-r.width*.2&&e.clientY>r.top+r.height*.2&&e.clientY<r.bottom-r.height*.2){
+   const k=[...o.parentElement.children];
+   if(k.indexOf(drag.t)<k.indexOf(o))o.after(drag.t);else o.before(drag.t);
+   drag.moved=true}}});
+document.addEventListener("touchmove",e=>{if(drag&&e.cancelable)e.preventDefault()},{passive:false});
+function dLoop(){if(!drag)return;const y=drag.y;if(y<110)scrollBy(0,-12);else if(y>innerHeight-150)scrollBy(0,12);raf=requestAnimationFrame(dLoop)}
+async function dEnd(){
+ clearTimeout(tm);tm=null;if(!drag)return;
+ const d=drag;drag=null;cancelAnimationFrame(raf);d.g.remove();d.t.classList.remove("dg");block=Date.now()+400;
+ if(!d.moved||!d.t.isConnected||!key)return;
+ const par=d.t.parentElement;
+ try{
+  if(d.sel===".cc"){
+   const dom=[...par.querySelectorAll(".cc")].map(b=>b.dataset.cat),rest=catAll().map(c=>c.k).filter(k=>!dom.includes(k));
+   U().ord=dom.concat(rest);await saveUI()}
+  else{
+   const ord=[...par.children].map(x=>+x.dataset.fi),pos=[...ord].sort((a,b)=>a-b),nf=files.slice();
+   pos.forEach((p,k)=>{nf[p]=files[ord[k]]});files=nf;await persist();render()}
+  touch()
+ }catch(_){}}
+document.addEventListener("pointerup",dEnd);document.addEventListener("pointercancel",dEnd);
+
+/* ---------- click actions ---------- */
+document.addEventListener("click",e=>{
+ const T=e.target;if(!T||!T.closest)return;
+ if(Date.now()<block&&T.closest(".cc,.fw")){e.stopPropagation();e.preventDefault();return}
+ if(editT){const c=T.closest(".cc");if(c){e.stopPropagation();e.preventDefault();openCE(c.dataset.cat)}}
+},true);
+const bioSup=()=>!!(window.PublicKeyCredential&&navigator.credentials&&window.isSecureContext);
+const bioOn=()=>{try{return !!localStorage.getItem("bio")}catch(_){return false}};
+const bdb=()=>new Promise((r,j)=>{const q=indexedDB.open("antor-bio",1);q.onupgradeneeded=()=>q.result.createObjectStore("k");q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error)});
+const bPut=async(k,v)=>{const d=await bdb();return new Promise((r,j)=>{const x=d.transaction("k","readwrite");x.objectStore("k").put(v,k);x.oncomplete=()=>r();x.onerror=()=>j(x.error)})};
+const bGet=async k=>{const d=await bdb();return new Promise((r,j)=>{const q=d.transaction("k").objectStore("k").get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error)})};
+const bDel=async k=>{try{const d=await bdb();await new Promise(r=>{const x=d.transaction("k","readwrite");x.objectStore("k").delete(k);x.oncomplete=()=>r();x.onerror=()=>r()})}catch(_){}};
+async function bioOff(){try{localStorage.removeItem("bio")}catch(_){}await bDel("bio")}
+async function bioEnable(pw){
+ const k=await derive(pw,unb(vault.salt));await open(k,vault.check);
+ const cr=await navigator.credentials.create({publicKey:{rp:{name:"Antor Vault",id:location.hostname},user:{id:crypto.getRandomValues(new Uint8Array(16)),name:"owner",displayName:"Antor"},challenge:crypto.getRandomValues(new Uint8Array(32)),pubKeyCredParams:[{type:"public-key",alg:-7},{type:"public-key",alg:-257}],authenticatorSelection:{authenticatorAttachment:"platform",userVerification:"required",residentKey:"discouraged"},timeout:60000,attestation:"none"}});
+ const ak=await crypto.subtle.generateKey({name:"AES-GCM",length:256},false,["encrypt","decrypt"]),iv=crypto.getRandomValues(new Uint8Array(12));
+ const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},ak,new TextEncoder().encode(pw));
+ await bPut("bio",{ak,iv,ct});localStorage.setItem("bio",b64(cr.rawId))}
+async function bioGetPw(){
+ const cid=localStorage.getItem("bio");if(!cid)throw new Error("off");
+ await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),allowCredentials:[{type:"public-key",id:unb(cid),transports:["internal"]}],userVerification:"required",rpId:location.hostname,timeout:60000}});
+ const r=await bGet("bio");if(!r)throw new Error("nokey");
+ return new TextDecoder().decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:r.iv},r.ak,r.ct))}
+document.addEventListener("click",async e=>{
+ const x=e.target.closest&&e.target.closest('[data-a^="x_"],[data-a="ckr"]');if(!x)return;const a=x.dataset.a;
+ if(a==="x_edt"){editT=!editT;render()}
+ else if(a==="x_newc"){openCE("")}
+ else if(a==="ckr"){if(key){U().ord=[];await saveUI();render()}}
+ else if(a==="x_ej"){const i=$("#ce_i");if(i)i.value=x.dataset.e}
+ else if(a==="x_sw"){CE.bg=SWS[+x.dataset.j];document.querySelectorAll(".sws button").forEach(b=>b.classList.toggle("on",b===x))}
+ else if(a==="x_cs"&&CE)await ceSave();
+ else if(a==="x_cd"&&CE)await ceDel();
+ else if(a==="x_cr"&&CE){const u=U();if(u.ov)delete u.ov[CE.k];u.hid=(u.hid||[]).filter(k=>k!==CE.k);await saveUI();$("#dlg").close();render()}
+ else if(a==="x_emg"&&vault){vault.emgOn=!vault.emgOn;await persist();render()}
+ else if(a==="x_bks"){try{localStorage.setItem("bks",Date.now()+7*864e5)}catch(_){}render()}
+ else if(a==="x_bioask"){const d=$("#dlg");d.innerHTML=`<div class="acts" style="justify-content:space-between;margin-bottom:10px"><b>🧬 ${B("বায়োমেট্রিক আনলক","Biometric unlock")}</b><button class="btn g s" data-a="close">${t("close")}</button></div><p>${B("নিশ্চিত করতে ভল্টের পাসওয়ার্ড দিন","Enter your vault password to confirm")}</p><input id="bio_pw" type="password" autocomplete="current-password"><div class="err" id="bio_e"></div><button class="btn" data-a="x_bioon">${B("চালু করুন","Turn on")}</button>`;d.showModal()}
+ else if(a==="x_bioon"){const pw=(($("#bio_pw")||{}).value)||"",er=$("#bio_e");
+  try{await bioEnable(pw);$("#dlg").close();alert(B("বায়োমেট্রিক আনলক চালু হয়েছে","Biometric unlock is on"));render()}
+  catch(err){await bioOff();if(er)er.textContent=(err&&err.name==="NotAllowedError")?B("বাতিল হয়েছে","Cancelled"):(err&&err.name==="OperationError")?t("wrong"):B("চালু করা গেল না: ","Could not enable: ")+((err&&err.message)||"")}}
+ else if(a==="x_bioff"){await bioOff();render()}
+ else if(a==="x_bio"){
+  let pw;try{pw=await bioGetPw()}catch(_){alert(B("বায়োমেট্রিক বাতিল বা ব্যর্থ — পাসওয়ার্ড দিন","Biometric cancelled or failed — use your password"));return}
+  try{await unlock(pw)}catch(_){await bioOff();alert(B("পাসওয়ার্ড বদলেছে — Settings-এ আবার চালু করুন","Password changed — turn biometric on again in Settings"));render();return}
+  try{FL=0}catch(_){}touch();
+  try{if(pend==="edit"){pend=null;tab="profile";startEdit()}else if(pend){const f=files.find(q=>q.d.e===pend);pend=null;tab="profile";if(f)setTimeout(()=>preview(f),60)}}catch(_){}
+  render()}
+});
+
+/* ---------- lock screen extras, settings cards, backup reminder ---------- */
+const _dX=V.docs;V.docs=()=>{const h=_dX();if(!vault||key)return h;let a=h;
+ if(bioSup()&&bioOn())a+=`<div class="glass"><button class="btn" data-a="x_bio" style="width:100%">🧬 ${B("বায়োমেট্রিক দিয়ে আনলক","Unlock with biometrics")}</button></div>`;
+ if(vault.emgOn)a+=emerg();
+ return a};
+const _sX=V.set;V.set=()=>_sX()+(vault?`<div class="glass"><h2>🚨 ${B("জরুরি কার্ড","Emergency card")}</h2><p>${B("চালু থাকলে ভল্ট লক থাকা অবস্থাতেও Documents-এ রক্তের গ্রুপ ও জরুরি নম্বর দেখা যাবে। ফোন হাতে পেলে যে কেউ এটা দেখতে পারবে।","When on, your blood group and emergency contact show on the lock screen without a password. Anyone holding your phone can see them.")}</p>${(!pr().blood&&!pr().ecp)?`<p style="font-size:12px">⚠️ ${B("আগে Profile-এ রক্তের গ্রুপ বা জরুরি নম্বর দিন।","Add blood group or emergency number in Profile first.")}</p>`:""}<button class="btn ${vault.emgOn?"":"g"}" data-a="x_emg">${vault.emgOn?"ON ✓":"OFF"}</button></div>`+(bioSup()?`<div class="glass"><h2>🧬 ${B("বায়োমেট্রিক আনলক","Biometric unlock")}</h2><p>${B("আঙুলের ছাপ, ফেস বা স্ক্রিন লক দিয়ে ভল্ট খুলুন। শুধু এই ডিভাইসে কাজ করে, পাসওয়ার্ড সবসময় কাজ করবে। পাসওয়ার্ড বদলালে আবার চালু করতে হবে।","Unlock with fingerprint, face or screen lock. Works on this device only; your password always works. Turn it on again after changing the password.")}</p>${bioOn()?`<button class="btn g" data-a="x_bioff">${B("বন্ধ করুন","Turn off")}</button>`:`<button class="btn" data-a="x_bioask">${B("চালু করুন","Turn on")}</button>`}</div>`:""):"");
+window.bkWarn=()=>{if(!vault||!(vault.files||[]).length)return"";
+ let l=0,sn=0;try{l=+localStorage.getItem("lbk")||0;sn=+localStorage.getItem("bks")||0}catch(_){}
+ if(Date.now()<sn)return"";const d=l?Math.floor((Date.now()-l)/864e5):999;if(d<30)return"";
+ return`<div class="warn">💾 ${l?B(`${bn(d)} দিন ধরে ব্যাকআপ নেওয়া হয়নি`,`No backup for ${d} days`):B("এখনো কোনো ব্যাকআপ নেওয়া হয়নি","No backup taken yet")}<div class="acts" style="margin-top:8px"><button class="btn s" data-a="bk">⬇ ${B("এখন ব্যাকআপ","Backup now")}</button><button class="btn g s" data-a="x_bks">${B("৭ দিন পরে","Remind in 7 days")}</button></div></div>`};
+const _hX=V.home;V.home=()=>window.bkWarn()+_hX();
+})();
 document.addEventListener("input",e=>{if(e.target.id==="q"&&$("#il"))$("#il").innerHTML=fnd(e.target.value)});
 document.addEventListener("click",async e=>{const x=e.target.closest("[data-a]");if(!x)return;const a=x.dataset.a,i=+x.dataset.i;
 if(a==="addi"){const n=g("i_n").trim();if(!n)return;IT.unshift({n,p:g("i_p"),t:g("i_t")});await save();render()}
@@ -357,7 +553,7 @@ function landing(){const cv=PUB.find(p=>p.d.k==="cv"),d=$("#dlg");d.innerHTML=`<
 let LK=120000,FL=0;try{LK=+localStorage.getItem("lk")||120000}catch(_){}
 const bn=n=>L==="bn"?n.toLocaleString("bn-BD"):n;
 const _hh=V.home;V.home=()=>(key?warn():"")+_hh();
-async function bk(){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(vault)],{type:"application/json"}));a.download="antor-backup.json";document.body.appendChild(a);a.click();a.remove()}
+async function bk(){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(vault)],{type:"application/json"}));a.download="antor-backup.json";document.body.appendChild(a);a.click();a.remove();try{localStorage.setItem("lbk",Date.now())}catch(_){}try{render()}catch(_){}}
 const _s4=V.set;V.set=()=>_s4()+(vault?`${ownOK()?`<div class="glass"><h2>💾 ${B("ব্যাকআপ","Backup")}</h2><p>${B("এনক্রিপ্টেড ব্যাকআপ ফাইল (পাসওয়ার্ড ছাড়া খোলা যায় না)।","Encrypted backup file (useless without your password).")}</p><div class="acts"><button class="btn" data-a="bk">⬇ ${B("ব্যাকআপ","Backup")}</button><label class="btn g">⬆ ${B("রিস্টোর","Restore")}<input id="rs" type="file" accept=".json" hidden></label></div></div>`:""}<div class="glass"><h2>⏱ ${B("অটো-লক","Auto-lock")}</h2><div class="acts">${[1,2,5,15].map(m=>`<button class="btn s ${LK===m*6e4?"":"g"}" data-a="lk" data-i="${m}">${bn(m)} ${B("মিনিট","min")}</button>`).join("")}</div></div>`:"");
 document.addEventListener("input",e=>{if(e.target.id!=="ds")return;const v=e.target.value.toLowerCase();document.querySelectorAll(".file").forEach(r=>{const h=!r.textContent.toLowerCase().includes(v),n=r.nextElementSibling;r.style.display=h?"none":"";if(n&&n.classList.contains("xr"))n.style.display=h?"none":""})});
 document.addEventListener("change",async e=>{const x=e.target;if(x.id!=="rs"||!x.files[0])return;try{const v=JSON.parse(await x.files[0].text());if(!v.salt||!v.check)throw 0;if(!confirm(B("বর্তমান ভল্ট বদলে যাবে। চালিয়ে যাবেন?","This replaces the current vault. Continue?")))return;vault=v;await dbSet(v);key=null;files=[];IT=[];render()}catch(_){alert(B("ব্যাকআপ ফাইল ঠিক নয়","Invalid backup file"))}});
@@ -384,7 +580,7 @@ async function cloudPush(){
  const old=m.exists?m.data().c:0,t=vault.ts=vault.ts||Date.now(),o={...vault};delete o.sy;
  const n=await put(r,JSON.stringify(o));await r.set({c:n,t});
  for(let k=n;k<old;k++)await r.collection("c").doc(""+k).delete();
- vault.sy=t;CS="ok";await dbSet(vault)}
+ vault.sy=t;CS="ok";try{localStorage.setItem("lbk",Date.now())}catch(_){}await dbSet(vault)}
 async function autoSync(){
  if(!isOwner(au&&au.currentUser))return;
  const r=db.collection("vault").doc("main"),m=await r.get();

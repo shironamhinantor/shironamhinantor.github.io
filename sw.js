@@ -1,4 +1,4 @@
-const C="antor-v2";
+const C="antor-v3";
 self.addEventListener("install",()=>self.skipWaiting());
 self.addEventListener("activate",e=>e.waitUntil(clients.claim()));
 self.addEventListener("fetch",e=>{const r=e.request,h=new URL(r.url).hostname;
