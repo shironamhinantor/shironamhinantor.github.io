@@ -270,7 +270,7 @@ const OWNER_EMAIL="shironamhinantor@gmail.com"; // <-- এখানে আপন
 const OWNER_MSG=()=>B("Owner only sign in — শুধু মালিক সাইন-ইন করতে পারবেন","Owner only sign in");
 const isOwner=u=>!!u&&u.emailVerified!==false&&(u.email||"").toLowerCase()===OWNER_EMAIL.toLowerCase();
 function AS(u){if(u&&!isOwner(u))au.signOut().catch(()=>{});}
-const GCID=""; // <-- এখানে Web client ID বসান (xxxx.apps.googleusercontent.com)
+const GCID="240273747170-d730b4qvmqbu8mn1r6d86d73s8n0v8ai.apps.googleusercontent.com"; // <-- এখানে Web client ID বসান (xxxx.apps.googleusercontent.com)
 const gisToken=()=>new Promise((res,rej)=>{
  if(!window.google||!google.accounts||!google.accounts.oauth2)return rej(new Error(B("Google সাইন-ইন লোড হয়নি — ইন্টারনেট চেক করুন","Google sign-in failed to load — check internet")));
  const c=google.accounts.oauth2.initTokenClient({client_id:GCID,scope:"openid email profile",prompt:"select_account",
