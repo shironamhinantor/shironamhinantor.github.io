@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="bn"><head><meta charset="utf-8">
+<html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Antor · Digital ID</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
@@ -119,8 +119,8 @@ confirm:"এই ডকুমেন্ট মুছবেন?",lang:"ভাষা
 auto:"২ মিনিট কিছু না করলে অটো-লক",enc:"আপনার ডিভাইসেই AES-256 এনক্রিপ্টেড",quick:"কুইক অ্যাক্সেস",busy:"কাজ চলছে…",close:"বন্ধ",notice:"ডকুমেন্ট এই ব্রাউজারে এনক্রিপ্টেড অবস্থায় থাকে। অন্য ডিভাইসে খুলতে সাইট এক্সপোর্ট করে হোস্ট করুন।"}};
 Object.assign(T.en,{editp:"Edit profile",owner:"Owner",photo:"Photo",fname:"Full name",frole:"Headline",skills:"Skills (comma separated)",ldeg:"Degree / Exam",inst:"Institution",per:"Period (e.g. 2020 – 2024)",attach:"Attach certificate (locked)",replace:"Replace certificate",adde:"+ Add education",save:"Save",cancel:"Cancel",cert:"Certificate",accent:"Accent color"});
 Object.assign(T.bn,{editp:"প্রোফাইল এডিট",owner:"মালিক",photo:"ছবি",fname:"পূর্ণ নাম",frole:"পরিচিতি লাইন",skills:"দক্ষতা (কমা দিয়ে)",ldeg:"ডিগ্রি / পরীক্ষা",inst:"প্রতিষ্ঠান",per:"সময়কাল (যেমন ২০২০ – ২০২৪)",attach:"সনদ যুক্ত করুন (লক থাকবে)",replace:"সনদ বদলান",adde:"+ শিক্ষা যোগ করুন",save:"সেভ",cancel:"বাতিল",cert:"সনদ",accent:"অ্যাকসেন্ট রঙ"});
-let L="bn",tab="home",key=null,files=[],vault=null,msg="",busy=false,timer,editing=false,pend=null;
-try{L=localStorage.getItem("l")||"bn"}catch(e){}
+let L="en",tab="home",key=null,files=[],vault=null,msg="",busy=false,timer,editing=false,pend=null;
+try{L=localStorage.getItem("l")||"en"}catch(e){}
 const t=k=>{const m={name:"name",role:"role",aboutv:"about",locv:"loc"},v=pr()[m[k]];return v?esc(v):T[L][k]},esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 /* crypto */
 const b64=u=>{u=new Uint8Array(u);let s="";for(let i=0;i<u.length;i+=8192)s+=String.fromCharCode.apply(null,u.subarray(i,i+8192));return btoa(s)};
