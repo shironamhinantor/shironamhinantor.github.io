@@ -412,4 +412,174 @@ document.addEventListener("click",async e=>{const x=e.target.closest('[data-a="g
 if("serviceWorker" in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{});
 (async()=>{if(!FB.projectId||!window.firebase||!fbOn()){if(QV)qrOpen(QV);return}try{const p=await db.collection("pub").doc("profile").get();PP=p.exists?p.data():null;PUB=(await db.collection("pubfiles").get()).docs.map(d=>({id:d.id,d:d.data()}))}catch(_){}render();const c=new URLSearchParams(location.search).get("c");if(c){tab="docs";getc(c)}else if(QV)qrOpen(QV)})();
 VL=(async()=>{let v=await dbGet();if(!v){try{const e=JSON.parse($("#vault").textContent);if(e&&e.salt)v=e}catch(_){}}vault=v||null;render()})();
+</script>
+<script>
+/* ===== Addon: fast lazy vault, thumbnails, big viewer (photo + PDF), reliable auto-sync ===== */
+(()=>{
+const css=`
+.thb{width:72px;height:72px;border-radius:16px;overflow:hidden;flex:none;display:grid;place-items:center;background:var(--card);border:1px solid var(--bd);font-size:30px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.file{flex-wrap:wrap;row-gap:10px}.file .n{flex:1 1 0;min-width:110px;white-space:normal;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.file .acts{flex:1 1 100%}
+.thb img{width:100%;height:100%;object-fit:cover;display:block}
+.thb .pf{font:700 13px Sora,sans-serif;color:#fff;background:linear-gradient(135deg,#ff4d6d,#e5484d);width:100%;height:100%;display:grid;place-items:center;letter-spacing:.5px}
+dialog.vw{width:100vw;max-width:100vw;height:100vh;height:100dvh;max-height:100vh;max-height:100dvh;margin:0;border:0;border-radius:0;padding:10px 10px calc(10px + env(safe-area-inset-bottom,0px))}
+dialog.vw[open]{display:flex;flex-direction:column}
+.vh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;padding-top:env(safe-area-inset-top,0px)}
+.vh b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
+.vb{flex:1;min-height:0;overflow:auto;border-radius:12px;background:rgba(127,127,127,.14);-webkit-overflow-scrolling:touch}
+dialog.vw .vb img{display:block;margin:0 auto;max-width:none;max-height:none;border-radius:0;width:100%;height:auto}
+.pdfp{margin:0 auto}.pg{display:block;width:100%;height:auto;margin:0 0 8px;background:#fff}
+.vm{padding:28px 16px;text-align:center}
+#syc{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:25;border:1px solid var(--bd);background:var(--bar);color:var(--tx);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:99px;padding:6px 14px;font:600 12px Sora,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.25);display:none;cursor:pointer}
+#syc.w{border-color:rgba(255,159,69,.7)}
+`;
+document.head.insertAdjacentHTML("beforeend","<style>"+css+"</style>");
+
+/* ---------- lazy payloads: unlock decrypts only small metadata ---------- */
+const _seal=seal,_render=render;
+const meta=d=>{const m={};for(const k in d)if(k!=="b")m[k]=d[k];return m};
+const ldB=async d=>{if(!d||d.b!==undefined||!d.$lz)return;const z=d.$lz;z.p=z.p||open(z.k,z.s).then(x=>{Object.defineProperty(d,"b",{value:x.b,writable:true,enumerable:true,configurable:true})});await z.p};
+const evict=d=>{if(d&&d.$lz&&d.b!==undefined){delete d.b;d.$lz.p=null}};
+seal=async function(k,o){
+ if(o&&!Array.isArray(o)&&o.b===undefined&&o.$lz)await ldB(o);
+ const s=await _seal(k,o);
+ if(o&&typeof o.b==="string"&&o.n)s.m=await _seal(k,meta(o));
+ return s};
+async function openFiles(k,list){const mig=[];
+ const out=await Promise.all(list.map(async s=>{
+  if(s.m){try{const d=await open(k,s.m);Object.defineProperty(d,"$lz",{value:{k,s,p:null}});return{s,d}}catch(_){}}
+  const d=await open(k,s);mig.push({s,d});return{s,d}}));
+ if(mig.length)setTimeout(async()=>{try{for(const x of mig)x.s.m=await _seal(k,meta(x.d));await dbSet(vault)}catch(_){}},50);
+ return out}
+unlock=async function(pw){
+ const k=await derive(pw,unb(vault.salt));await open(k,vault.check);
+ const out=await openFiles(k,vault.files);
+ key=k;files=out;IT=vault.it?await open(k,vault.it):[];QS=vault.qs?await open(k,vault.qs):[];FM=vault.fm?await open(k,vault.fm):[];
+ setTimeout(bgThumbs,600)};
+
+/* wrappers: make sure the payload is loaded before it is used */
+const _dl=download,_shr=shr,_pubt=pubt,_showQR=showQR;
+download=async function(f){try{await ldB(f&&f.d);return await _dl(f)}finally{}};
+shr=async function(i){if(files[i])await ldB(files[i].d);return _shr(i)};
+pubt=async function(i){if(files[i])await ldB(files[i].d);return _pubt(i)};
+showQR=async function(){for(const f of files)if(f.d.k==="cv")await ldB(f.d);return _showQR()};
+
+/* ---------- smaller photos + thumbnails ---------- */
+const mkThumb=async src=>{const bm=await createImageBitmap(src),S=200,c=document.createElement("canvas");c.width=c.height=S;const m=Math.min(bm.width,bm.height),x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,S,S);x.drawImage(bm,(bm.width-m)/2,(bm.height-m)/2,m,m,0,0,S,S);if(bm.close)bm.close();return c.toDataURL("image/jpeg",.72)};
+async function shrink(f){
+ const bm=await createImageBitmap(f,{imageOrientation:"from-image"}),M=2000,sc=Math.min(1,M/Math.max(bm.width,bm.height));
+ if(sc===1&&f.size<700*1024){if(bm.close)bm.close();return{blob:f,th:await mkThumb(f)}}
+ const c=document.createElement("canvas");c.width=Math.round(bm.width*sc);c.height=Math.round(bm.height*sc);
+ const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,c.width,c.height);x.drawImage(bm,0,0,c.width,c.height);if(bm.close)bm.close();
+ const bl=await new Promise(r=>c.toBlob(r,"image/jpeg",.85));
+ if(!bl||(sc===1&&bl.size>=f.size))return{blob:f,th:await mkThumb(f)};
+ return{blob:bl,th:await mkThumb(bl),conv:true}}
+addFiles=async function(list){busy=true;render();
+ for(const f of list){let blob=f,type=f.type||"application/octet-stream",name=f.name,th;
+  if(type.startsWith("image/")&&type!=="image/gif"&&type!=="image/svg+xml"){try{const r=await shrink(f);blob=r.blob;th=r.th;if(r.conv){type="image/jpeg";name=name.replace(/\.[^.]+$/,"")+".jpg"}}catch(_){}}
+  const d={n:name,t:type,z:blob.size,b:b64(await blob.arrayBuffer()),k:cat};if(th)d.th=th;
+  files.push({d,s:await seal(key,d)})}
+ await persist();busy=false;touch();render();setTimeout(bgThumbs,300)};
+
+/* ---------- pdf.js (loaded only when a PDF is opened) ---------- */
+let PJ;const PV="3.11.174",PB="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/"+PV+"/";
+const pdfjs=()=>window.pdfjsLib?Promise.resolve(pdfjsLib):(PJ||(PJ=new Promise((res,rej)=>{const s=document.createElement("script");s.src=PB+"pdf.min.js";s.onload=()=>{pdfjsLib.GlobalWorkerOptions.workerSrc=PB+"pdf.worker.min.js";res(pdfjsLib)};s.onerror=()=>{PJ=null;rej(new Error("pdf.js"))};document.head.append(s)})));
+async function pdfThumb(f){const lib=await pdfjs(),doc=await lib.getDocument({data:unb(f.d.b)}).promise,p=await doc.getPage(1),v0=p.getViewport({scale:1}),S=200,sc=S/v0.width,v=p.getViewport({scale:sc}),c=document.createElement("canvas");c.width=S;c.height=S;const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,S,S);await p.render({canvasContext:x,viewport:v}).promise;doc.destroy();return c.toDataURL("image/jpeg",.72)}
+let TB=0;
+async function bgThumbs(){if(TB||!key)return;TB=1;const k0=key;let ch=0;
+ try{for(const f of files.slice()){if(key!==k0)break;if(f.d.th!==undefined)continue;const t=f.d.t||"";const pdf=t==="application/pdf";if(!pdf&&!t.startsWith("image/"))continue;
+  try{await ldB(f.d);f.d.th=pdf?await pdfThumb(f):await mkThumb(blobOf(f))}catch(_){if(!pdf)f.d.th="";else{evict(f.d);continue}}
+  if(key!==k0)break;f.s=await seal(key,f.d);evict(f.d);ch++;decorate();await new Promise(r=>setTimeout(r,40))}
+  if(ch&&key===k0)await persist()}catch(_){}TB=0}
+
+/* ---------- list rows: show the real photo / PDF first page ---------- */
+function decorate(){if(!key)return;document.querySelectorAll("#app .file").forEach(r=>{const b=r.querySelector("[data-v]");if(!b)return;const i=+b.dataset.v,f=files[i];if(!f)return;const ic=r.firstElementChild;if(!ic)return;const st=f.d.th?"1":"0";if(ic.classList.contains("thb")&&ic.dataset.i==i&&ic.dataset.k===st)return;
+ ic.className="thb";ic.dataset.i=i;ic.dataset.k=st;ic.dataset.v=i;ic.removeAttribute("style");
+ const t=f.d.t||"";ic.innerHTML=f.d.th?`<img src="${f.d.th}" alt="">`:t==="application/pdf"?`<span class="pf">PDF</span>`:t.startsWith("image/")?"🖼":"📄"})}
+render=function(){_render.apply(this,arguments);try{decorate()}catch(_){}try{chip()}catch(_){}};
+
+/* ---------- big viewer: photo + PDF ---------- */
+const ZL=[100,150,220,320];let ZI=0,VU="",PD=null,VF=null;
+const zapply=()=>{const z=ZL[ZI]+"%",vb=$("#vb");if(!vb)return;const im=vb.querySelector("img"),pp=vb.querySelector(".pdfp");if(im)im.style.width=z;if(pp)pp.style.width=z};
+function vclean(){try{if(PD){PD.io.disconnect();PD.doc.destroy()}}catch(_){}PD=null;if(VU){URL.revokeObjectURL(VU);VU=""}if(VF){evict(VF.d);VF=null}}
+const dlgEl=$("#dlg");dlgEl.addEventListener("close",()=>{dlgEl.className="";vclean()});
+async function viewPdf(f,vb){const lib=await pdfjs(),doc=await lib.getDocument({data:unb(f.d.b)}).promise;vb.innerHTML="";
+ const W=Math.min(2400,Math.round(vb.clientWidth*Math.min(devicePixelRatio||1,2)*2)),wrap=document.createElement("div");wrap.className="pdfp";vb.append(wrap);
+ const p1=await doc.getPage(1),v1=p1.getViewport({scale:1}),slots=[];
+ for(let n=1;n<=doc.numPages;n++){const c=document.createElement("canvas");c.className="pg";c.width=10;c.height=10;c.style.aspectRatio=v1.width+"/"+v1.height;c.dataset.n=n;wrap.append(c);slots.push(c)}
+ const draw=async n=>{const c=slots[n-1];if(c.dataset.d)return;c.dataset.d=1;try{const p=await doc.getPage(n),v0=p.getViewport({scale:1}),v=p.getViewport({scale:W/v0.width});c.width=v.width;c.height=v.height;c.style.aspectRatio=v0.width+"/"+v0.height;await p.render({canvasContext:c.getContext("2d"),viewport:v}).promise}catch(_){}};
+ const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)draw(+e.target.dataset.n)}),{root:vb,rootMargin:"900px"});slots.forEach(c=>io.observe(c));
+ PD={doc,io};zapply()}
+preview=async function(f){
+ if(!f||!f.d)return;vclean();LP=f;VF=f.d.$lz?f:null;ZI=0;const d=$("#dlg");d.className="vw";
+ d.innerHTML=`<div class="vh"><b>${esc(f.d.n)}</b><span class="acts"><button class="btn g s" data-a="vz" data-z="-1">－</button><button class="btn g s" data-a="vz" data-z="1">＋</button><button class="btn g s" data-a="dlp">⬇</button><button class="btn g s" data-a="close">✕</button></span></div><div class="vb" id="vb"><p class="vm">${B("লোড হচ্ছে…","Loading…")}</p></div>`;
+ if(!d.open)d.showModal();
+ const vb=$("#vb");
+ try{await ldB(f.d);const t=f.d.t||"";
+  if(t.startsWith("image/")){VU=URL.createObjectURL(blobOf(f));vb.innerHTML=`<img src="${VU}" alt="">`;vb.querySelector("img").onerror=()=>{vb.innerHTML=`<p class="vm">${B("ছবি দেখানো যাচ্ছে না। ডাউনলোড করুন।","Can't show this image. Download it instead.")}</p>`}}
+  else if(t==="application/pdf"){try{await viewPdf(f,vb)}catch(e){VU=URL.createObjectURL(blobOf(f));vb.innerHTML=`<p class="vm">${B("PDF ভিউয়ার লোড হয়নি (ইন্টারনেট লাগবে)।","PDF viewer didn't load (needs internet once).")}</p><div class="acts" style="justify-content:center"><a class="btn" href="${VU}" target="_blank" rel="noopener">${B("ব্রাউজারে খুলুন","Open in browser")}</a><button class="btn g" data-a="dlp">⬇ ${B("ডাউনলোড","Download")}</button></div>`}}
+  else vb.innerHTML=`<p class="vm">${esc(f.d.n)}</p><div class="acts" style="justify-content:center"><button class="btn" data-a="dlp">⬇ ${B("ডাউনলোড","Download")}</button></div>`
+ }catch(e){vb.innerHTML=`<p class="vm">${esc(e.message||e)}</p>`}};
+document.addEventListener("click",e=>{const x=e.target.closest('[data-a="vz"]');if(!x)return;ZI=Math.max(0,Math.min(ZL.length-1,ZI+(+x.dataset.z)));zapply()});
+document.addEventListener("dblclick",e=>{if(e.target.closest("#vb img, #vb .pg")){ZI=(ZI+1)%ZL.length;zapply()}});
+
+/* ---------- cloud sync: visible status, polling, no surprise lock-out ---------- */
+let SS="",SE="",SB=0,SP=0,SH=0;
+const owner=()=>{try{return !!au&&isOwner(au.currentUser)}catch(_){return false}};
+function setSS(s,e){SS=s;SE=e?(e.message||String(e)):"";if(s==="ok"||s==="conflict")CS=s;try{chip()}catch(_){}if(s==="ok"){clearTimeout(SH);SH=setTimeout(()=>{if(SS==="ok")chip()},4000)}}
+let chipEl=null;
+function chip(){if(!chipEl){chipEl=document.createElement("button");chipEl.id="syc";document.body.append(chipEl);chipEl.onclick=chipTap}
+ let txt="",warn=false,show=true;
+ if(!vault||(!key&&!owner())){show=false}
+ else if(!owner()){txt="☁️ "+B("সিঙ্কের জন্য সাইন-ইন করুন","Sign in to sync");warn=true}
+ else if(SS==="busy")txt="☁️ "+B("সিঙ্ক হচ্ছে…","Syncing…");
+ else if(SS==="conflict"){txt="⚠️ "+B("সিঙ্ক দ্বন্দ্ব — ট্যাপ করুন","Sync conflict — tap");warn=true}
+ else if(SS==="err"){txt="⚠️ "+B("সিঙ্ক হয়নি — আবার চেষ্টা","Sync failed — retry");warn=true}
+ else if(SS==="ok"){txt="☁️ ✓ "+B("সিঙ্ক হয়েছে","Synced");show=!!SH}
+ else show=false;
+ chipEl.textContent=txt;chipEl.className=warn?"w":"";chipEl.style.display=show&&txt?"block":"none"}
+async function chipTap(){
+ if(!owner()){await W(async()=>{try{if(!fbOn())return;await login();await autoSync();render()}catch(e){alert(e.message)}});return}
+ if(SS==="conflict")return conflictUI();
+ if(SS==="err"&&SE&&!navigator.onLine)return alert(SE);
+ await W(async()=>{try{await autoSync()}catch(e){alert(e.message)}})}
+function conflictUI(){const d=$("#dlg");d.className="";d.innerHTML=`<h2 style="margin-top:0">⚠️ ${B("দুই ডিভাইসে আলাদা পরিবর্তন হয়েছে","Changes on two devices")}</h2><p>${B("এই ডিভাইসেও নতুন পরিবর্তন আছে, ক্লাউডেও নতুন ভল্ট আছে। কোনটা রাখবেন?","This device and the cloud both have newer changes. Which one do you keep?")}</p><div class="acts" style="flex-direction:column"><button class="btn" data-a="ckeep">⬆ ${B("এই ডিভাইসেরটা রাখুন (ক্লাউড বদলে যাবে)","Keep this device (replaces cloud)")}</button><button class="btn r" data-a="cuse">⬇ ${B("ক্লাউডেরটা নিন (এই ডিভাইস বদলে যাবে)","Use cloud (replaces this device)")}</button><button class="btn g" data-a="close">${t("close")}</button></div>`;d.showModal()}
+document.addEventListener("click",async e=>{const x=e.target.closest('[data-a="ckeep"],[data-a="cuse"]');if(!x)return;const a=x.dataset.a;
+ await W(async()=>{try{if(!fbOn())return;await login();
+  if(a==="ckeep")await cloudPush(true);
+  else{const r=db.collection("vault").doc("main"),m=await r.get();if(m.exists)await pullFrom(r,m);setSS("ok")}
+  $("#dlg").close();render()}catch(err){alert(err.message)}})});
+const put2=async(r,str)=>{const n=Math.ceil(str.length/CH);let i=0;const w=async()=>{while(i<n){const k=i++;await r.collection("c").doc(""+k).set({d:str.slice(k*CH,(k+1)*CH)})}};await Promise.all([w(),w(),w(),w()]);return n};
+cloudPush=async function(force){
+ if(!vault||!owner())return;if(SB){SP=1;return}SB=1;setSS("busy");
+ try{const r=db.collection("vault").doc("main"),m=await r.get(),ct=m.exists?m.data().t:0;
+  if(m.exists&&ct>(vault.sy||0)&&!force){setSS("conflict");return}
+  const old=m.exists?m.data().c:0;let t=vault.ts=vault.ts||Date.now();if(t<=ct){t=vault.ts=ct+1}
+  const o={...vault};delete o.sy;const n=await put2(r,JSON.stringify(o));await r.set({c:n,t});
+  for(let k=n;k<old;k++)await r.collection("c").doc(""+k).delete();
+  vault.sy=t;await dbSet(vault);setSS("ok")}
+ catch(e){setSS("err",e)}
+ finally{SB=0;if(SP){SP=0;setTimeout(()=>cloudPush().catch(()=>{}),500)}}};
+pullFrom=async function(r,m){
+ const v=JSON.parse(await take(r,m.data().c));v.sy=v.ts=m.data().t;
+ const same=!!(key&&vault&&vault.salt===v.salt),k0=key;vault=v;await dbSet(v);
+ if(same){try{const out=await openFiles(k0,v.files);files=out;IT=v.it?await open(k0,v.it):[];QS=v.qs?await open(k0,v.qs):[];FM=v.fm?await open(k0,v.fm):[]}catch(_){key=null;files=[];IT=[];QS=[];FM=[]}}
+ else{key=null;files=[];IT=[];QS=[];FM=[]}
+ setSS("ok");render();if(key)setTimeout(bgThumbs,600)};
+autoSync=async function(){
+ if(!owner())return;if(SB)return;SB=1;setSS("busy");let again=0;
+ try{const r=db.collection("vault").doc("main"),m=await r.get();
+  const fresh=!vault||(!(vault.files||[]).length&&!vault.profile&&!vault.it);
+  if(!m.exists){if(vault)again=1;else setSS("ok");return}
+  const ct=m.data().t,sy=vault?(vault.sy||0):0,ts=vault?(vault.ts||0):0;
+  if(!vault||(fresh&&sy<ct)||(sy<ct&&ts<=sy)){SB=0;await pullFrom(r,m);return}
+  if(sy<ct){setSS("conflict");return}
+  if(ts>sy)again=1;else setSS("ok")}
+ catch(e){setSS("err",e)}
+ finally{SB=0;if(again)cloudPush().catch(()=>{})}};
+const trySync=()=>{try{if(owner()&&navigator.onLine&&!editing&&!busy)autoSync().catch(()=>{})}catch(_){}};
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")trySync()});
+addEventListener("online",trySync);
+setInterval(()=>{if(document.visibilityState==="visible")trySync()},45000);
+setTimeout(chip,1500);
+})();
 </script></body></html>
