@@ -278,13 +278,17 @@ const gisToken=()=>new Promise((res,rej)=>{
   error_callback:e=>{const t=e&&e.type;rej(new Error(t==="popup_closed"?B("সাইন-ইন বাতিল হয়েছে","Sign-in cancelled"):t==="popup_failed_to_open"?B("পপআপ ব্লক হয়েছে — অনুমতি দিন","Popup blocked — allow popups"):"Sign-in error: "+(t||"unknown")))}});
  c.requestAccessToken()});
 async function login(){
- if(au.authStateReady)await au.authStateReady();
  if(isOwner(au.currentUser))return;
  let r;
  if(GCID){
-  const tok=await gisToken();
+  const tp=gisToken();
+  if(au.authStateReady)await au.authStateReady();
+  if(isOwner(au.currentUser)){tp.catch(()=>{});return}
+  const tok=await tp;
   r=await au.signInWithCredential(firebase.auth.GoogleAuthProvider.credential(null,tok));
  }else{
+  if(au.authStateReady)await au.authStateReady();
+  if(isOwner(au.currentUser))return;
   const pv=new firebase.auth.GoogleAuthProvider();pv.setCustomParameters({prompt:"select_account"});
   const mob=/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)||matchMedia("(display-mode: standalone)").matches;
   if(mob){au.signInWithRedirect(pv);throw new Error(B("গুগল সাইন-ইন পেজে নেওয়া হচ্ছে…","Redirecting to Google sign-in…"))}
