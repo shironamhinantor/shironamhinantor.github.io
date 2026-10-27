@@ -376,7 +376,7 @@ document.addEventListener("click",async e=>{const x=e.target.closest('[data-a="l
 await W(async()=>{try{const r=db.collection("cvs").doc("main"),D=(await r.get()).data(),k=await crypto.subtle.importKey("raw",unb(CVK),"AES-GCM",false,["decrypt"]),pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb(D.iv)},k,unb(await take(r,D.c)));download({d:{n:D.n,t:D.t,b:b64(pt)}})}catch(e){alert(e.message)}})});
 
 /* ===== Owner Google sign-in + encrypted vault cloud sync ===== */
-const schedPush=()=>{clearTimeout(PT);PT=setTimeout(()=>{try{if(au&&isOwner(au.currentUser))cloudPush().then(()=>render()).catch(()=>{})}catch(_){}},3000)};
+const schedPush=()=>{clearTimeout(PT);PT=setTimeout(()=>{try{if(au&&isOwner(au.currentUser))cloudPush().catch(()=>{})}catch(_){}},1200)};
 async function pullFrom(r,m){const v=JSON.parse(await take(r,m.data().c));v.sy=v.ts=m.data().t;vault=v;key=null;files=[];IT=[];QS=[];CS="ok";await dbSet(v);render()}
 async function cloudPush(){
  if(!vault||!isOwner(au&&au.currentUser))return;
@@ -402,8 +402,8 @@ async function cloudPull(){await W(async()=>{try{
  if(vault&&!confirm(B("এই ডিভাইসের ভল্ট ক্লাউডের ভল্ট দিয়ে বদলে যাবে। চালিয়ে যাবেন?","This replaces this device's vault with the cloud copy. Continue?")))return;
  await pullFrom(r,m)}catch(e){alert(e.message)}})}
 const _s5=V.set;V.set=()=>{const u=au&&au.currentUser,ok=isOwner(u);
- const st=ok?"✅ "+esc(u.email)+(CS==="conflict"?" · ⚠️ "+B("ক্লাউডে নতুন ভল্ট আছে — Pull করুন","cloud has a newer vault — Pull"):CS==="ok"?" · ☁️ "+B("সিঙ্ক হয়েছে","synced"):""):B("সাইন-ইন করা নেই","Not signed in");
- return _s5()+`<div class="glass"><h2>🔑 ${B("মালিক সাইন-ইন","Owner sign-in")}</h2><p>${B("শুধু আপনার Google অ্যাকাউন্ট। অন্য কেউ ঢুকতে পারবে না (Owner only sign in)।","Your Google account only. Anyone else is blocked (Owner only sign in).")}</p><p>${st}</p><div class="acts">${ok?`<button class="btn" data-a="cpush">⬆ ${B("এখন সিঙ্ক","Sync now")}</button><button class="btn g" data-a="cpull">⬇ Pull</button><button class="btn g" data-a="gso">${B("সাইন-আউট","Sign out")}</button>`:`<button class="btn" data-a="gsi">Google ${B("দিয়ে সাইন-ইন","sign-in")}</button>`}</div></div>`};
+ const st=ok?"✅ "+esc(u.email)+" · ☁️ "+B("অটো সিঙ্ক চালু","Auto-sync on"):B("সাইন-ইন করা নেই","Not signed in");
+ return _s5()+`<div class="glass"><h2>🔑 ${B("মালিক সাইন-ইন","Owner sign-in")}</h2><p>${B("শুধু আপনার Google অ্যাকাউন্ট। সাইন-ইন করলে সবকিছু নিজে নিজে সিঙ্ক হবে।","Your Google account only. Once signed in, everything syncs by itself.")}</p><p>${st}</p><div class="acts">${ok?`<button class="btn g" data-a="gso">${B("সাইন-আউট","Sign out")}</button>`:`<button class="btn" data-a="gsi">Google ${B("দিয়ে সাইন-ইন","sign-in")}</button>`}</div></div>`};
 document.addEventListener("click",async e=>{const x=e.target.closest('[data-a="gsi"],[data-a="gso"],[data-a="cpull"],[data-a="cpush"]');if(!x)return;const a=x.dataset.a;
  if(a==="gsi")await W(async()=>{try{if(!fbOn())return;await login();await autoSync();render()}catch(e){alert(e.message)}});
  else if(a==="gso"){try{if(au)await au.signOut()}catch(_){}CS="";render()}
@@ -429,8 +429,6 @@ dialog.vw[open]{display:flex;flex-direction:column}
 dialog.vw .vb img{display:block;margin:0 auto;max-width:none;max-height:none;border-radius:0;width:100%;height:auto}
 .pdfp{margin:0 auto}.pg{display:block;width:100%;height:auto;margin:0 0 8px;background:#fff}
 .vm{padding:28px 16px;text-align:center}
-#syc{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:25;border:1px solid var(--bd);background:var(--bar);color:var(--tx);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:99px;padding:6px 14px;font:600 12px Sora,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.25);display:none;cursor:pointer}
-#syc.w{border-color:rgba(255,159,69,.7)}
 `;
 document.head.insertAdjacentHTML("beforeend","<style>"+css+"</style>");
 
@@ -495,7 +493,7 @@ async function bgThumbs(){if(TB||!key)return;TB=1;const k0=key;let ch=0;
 function decorate(){if(!key)return;document.querySelectorAll("#app .file").forEach(r=>{const b=r.querySelector("[data-v]");if(!b)return;const i=+b.dataset.v,f=files[i];if(!f)return;const ic=r.firstElementChild;if(!ic)return;const st=f.d.th?"1":"0";if(ic.classList.contains("thb")&&ic.dataset.i==i&&ic.dataset.k===st)return;
  ic.className="thb";ic.dataset.i=i;ic.dataset.k=st;ic.dataset.v=i;ic.removeAttribute("style");
  const t=f.d.t||"";ic.innerHTML=f.d.th?`<img src="${f.d.th}" alt="">`:t==="application/pdf"?`<span class="pf">PDF</span>`:t.startsWith("image/")?"🖼":"📄"})}
-render=function(){_render.apply(this,arguments);try{decorate()}catch(_){}try{chip()}catch(_){}};
+render=function(){_render.apply(this,arguments);try{decorate()}catch(_){}};
 
 /* ---------- big viewer: photo + PDF ---------- */
 const ZL=[100,150,220,320];let ZI=0,VU="",PD=null,VF=null;
@@ -522,64 +520,55 @@ preview=async function(f){
 document.addEventListener("click",e=>{const x=e.target.closest('[data-a="vz"]');if(!x)return;ZI=Math.max(0,Math.min(ZL.length-1,ZI+(+x.dataset.z)));zapply()});
 document.addEventListener("dblclick",e=>{if(e.target.closest("#vb img, #vb .pg")){ZI=(ZI+1)%ZL.length;zapply()}});
 
-/* ---------- cloud sync: visible status, polling, no surprise lock-out ---------- */
-let SS="",SE="",SB=0,SP=0,SH=0;
+/* ---------- cloud sync: silent, automatic, no buttons ---------- */
+let SB=0,SP=0;
 const owner=()=>{try{return !!au&&isOwner(au.currentUser)}catch(_){return false}};
-function setSS(s,e){SS=s;SE=e?(e.message||String(e)):"";if(s==="ok"||s==="conflict")CS=s;try{chip()}catch(_){}if(s==="ok"){clearTimeout(SH);SH=setTimeout(()=>{if(SS==="ok")chip()},4000)}}
-let chipEl=null;
-function chip(){if(!chipEl){chipEl=document.createElement("button");chipEl.id="syc";document.body.append(chipEl);chipEl.onclick=chipTap}
- let txt="",warn=false,show=true;
- if(!vault||(!key&&!owner())){show=false}
- else if(!owner()){txt="☁️ "+B("সিঙ্কের জন্য সাইন-ইন করুন","Sign in to sync");warn=true}
- else if(SS==="busy")txt="☁️ "+B("সিঙ্ক হচ্ছে…","Syncing…");
- else if(SS==="conflict"){txt="⚠️ "+B("সিঙ্ক দ্বন্দ্ব — ট্যাপ করুন","Sync conflict — tap");warn=true}
- else if(SS==="err"){txt="⚠️ "+B("সিঙ্ক হয়নি — আবার চেষ্টা","Sync failed — retry");warn=true}
- else if(SS==="ok"){txt="☁️ ✓ "+B("সিঙ্ক হয়েছে","Synced");show=!!SH}
- else show=false;
- chipEl.textContent=txt;chipEl.className=warn?"w":"";chipEl.style.display=show&&txt?"block":"none"}
-async function chipTap(){
- if(!owner()){await W(async()=>{try{if(!fbOn())return;await login();await autoSync();render()}catch(e){alert(e.message)}});return}
- if(SS==="conflict")return conflictUI();
- if(SS==="err"&&SE&&!navigator.onLine)return alert(SE);
- await W(async()=>{try{await autoSync()}catch(e){alert(e.message)}})}
-function conflictUI(){const d=$("#dlg");d.className="";d.innerHTML=`<h2 style="margin-top:0">⚠️ ${B("দুই ডিভাইসে আলাদা পরিবর্তন হয়েছে","Changes on two devices")}</h2><p>${B("এই ডিভাইসেও নতুন পরিবর্তন আছে, ক্লাউডেও নতুন ভল্ট আছে। কোনটা রাখবেন?","This device and the cloud both have newer changes. Which one do you keep?")}</p><div class="acts" style="flex-direction:column"><button class="btn" data-a="ckeep">⬆ ${B("এই ডিভাইসেরটা রাখুন (ক্লাউড বদলে যাবে)","Keep this device (replaces cloud)")}</button><button class="btn r" data-a="cuse">⬇ ${B("ক্লাউডেরটা নিন (এই ডিভাইস বদলে যাবে)","Use cloud (replaces this device)")}</button><button class="btn g" data-a="close">${t("close")}</button></div>`;d.showModal()}
-document.addEventListener("click",async e=>{const x=e.target.closest('[data-a="ckeep"],[data-a="cuse"]');if(!x)return;const a=x.dataset.a;
- await W(async()=>{try{if(!fbOn())return;await login();
-  if(a==="ckeep")await cloudPush(true);
-  else{const r=db.collection("vault").doc("main"),m=await r.get();if(m.exists)await pullFrom(r,m);setSS("ok")}
-  $("#dlg").close();render()}catch(err){alert(err.message)}})});
+const setSS=s=>{if(s==="ok"||s==="busy"||s==="err")CS=s==="ok"?"ok":CS==="ok"?"":CS};
 const put2=async(r,str)=>{const n=Math.ceil(str.length/CH);let i=0;const w=async()=>{while(i<n){const k=i++;await r.collection("c").doc(""+k).set({d:str.slice(k*CH,(k+1)*CH)})}};await Promise.all([w(),w(),w(),w()]);return n};
 cloudPush=async function(force){
- if(!vault||!owner())return;if(SB){SP=1;return}SB=1;setSS("busy");
+ if(!vault||!owner())return;if(SB){SP=1;return}SB=1;
  try{const r=db.collection("vault").doc("main"),m=await r.get(),ct=m.exists?m.data().t:0;
-  if(m.exists&&ct>(vault.sy||0)&&!force){setSS("conflict");return}
+  if(m.exists&&ct>(vault.sy||0)&&!force){SB=0;return autoSync()}
   const old=m.exists?m.data().c:0;let t=vault.ts=vault.ts||Date.now();if(t<=ct){t=vault.ts=ct+1}
   const o={...vault};delete o.sy;const n=await put2(r,JSON.stringify(o));await r.set({c:n,t});
   for(let k=n;k<old;k++)await r.collection("c").doc(""+k).delete();
-  vault.sy=t;await dbSet(vault);setSS("ok")}
- catch(e){setSS("err",e)}
- finally{SB=0;if(SP){SP=0;setTimeout(()=>cloudPush().catch(()=>{}),500)}}};
+  vault.sy=t;await dbSet(vault);CS="ok"}
+ catch(e){CS=""}
+ finally{SB=0;if(SP){SP=0;setTimeout(()=>cloudPush().catch(()=>{}),400)}}};
 pullFrom=async function(r,m){
  const v=JSON.parse(await take(r,m.data().c));v.sy=v.ts=m.data().t;
  const same=!!(key&&vault&&vault.salt===v.salt),k0=key;vault=v;await dbSet(v);
- if(same){try{const out=await openFiles(k0,v.files);files=out;IT=v.it?await open(k0,v.it):[];QS=v.qs?await open(k0,v.qs):[];FM=v.fm?await open(k0,v.fm):[]}catch(_){key=null;files=[];IT=[];QS=[];FM=[]}}
+ if(same){try{files=await openFiles(k0,v.files);IT=v.it?await open(k0,v.it):[];QS=v.qs?await open(k0,v.qs):[];FM=v.fm?await open(k0,v.fm):[]}catch(_){key=null;files=[];IT=[];QS=[];FM=[]}}
  else{key=null;files=[];IT=[];QS=[];FM=[]}
- setSS("ok");render();if(key)setTimeout(bgThumbs,600)};
+ CS="ok";if(!(editing||busy))render();if(key)setTimeout(bgThumbs,600)};
+/* both devices changed: merge automatically, never ask */
+async function mergeBoth(r,m){
+ const cv=JSON.parse(await take(r,m.data().c)),ct=m.data().t;
+ if(cv.salt!==vault.salt){
+  const lf=(vault.files||[]).length,cf=(cv.files||[]).length;
+  if(cf>lf||(cf===lf&&ct>=(vault.ts||0)))return pullFrom(r,m);
+  return cloudPush(true)}
+ const newer=ct>(vault.ts||0)?cv:vault,older=newer===cv?vault:cv,seen=new Set((newer.files||[]).map(s=>s.ct)),files2=[...(newer.files||[])];
+ for(const s of older.files||[])if(!seen.has(s.ct)){files2.push(s);seen.add(s.ct)}
+ const mg={...newer,files:files2};mg.sy=ct;mg.ts=Math.max(vault.ts||0,ct)+1;
+ const k0=key,same=!!k0;vault=mg;await dbSet(mg);
+ if(same){try{files=await openFiles(k0,mg.files);IT=mg.it?await open(k0,mg.it):[];QS=mg.qs?await open(k0,mg.qs):[];FM=mg.fm?await open(k0,mg.fm):[]}catch(_){key=null;files=[];IT=[];QS=[];FM=[]}if(!(editing||busy))render();if(key)setTimeout(bgThumbs,600)}
+ return cloudPush(true)}
 autoSync=async function(){
- if(!owner())return;if(SB)return;SB=1;setSS("busy");let again=0;
+ if(!owner())return;if(SB)return;SB=1;let next=0;
  try{const r=db.collection("vault").doc("main"),m=await r.get();
   const fresh=!vault||(!(vault.files||[]).length&&!vault.profile&&!vault.it);
-  if(!m.exists){if(vault)again=1;else setSS("ok");return}
+  if(!m.exists){if(vault)next=1;return}
   const ct=m.data().t,sy=vault?(vault.sy||0):0,ts=vault?(vault.ts||0):0;
   if(!vault||(fresh&&sy<ct)||(sy<ct&&ts<=sy)){SB=0;await pullFrom(r,m);return}
-  if(sy<ct){setSS("conflict");return}
-  if(ts>sy)again=1;else setSS("ok")}
- catch(e){setSS("err",e)}
- finally{SB=0;if(again)cloudPush().catch(()=>{})}};
+  if(sy<ct){SB=0;await mergeBoth(r,m);return}
+  if(ts>sy)next=1;else CS="ok"}
+ catch(e){CS=""}
+ finally{SB=0;if(next)cloudPush().catch(()=>{})}};
 const trySync=()=>{try{if(owner()&&navigator.onLine&&!editing&&!busy)autoSync().catch(()=>{})}catch(_){}};
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")trySync()});
 addEventListener("online",trySync);
-setInterval(()=>{if(document.visibilityState==="visible")trySync()},45000);
-setTimeout(chip,1500);
+addEventListener("focus",trySync);
+setInterval(()=>{if(document.visibilityState==="visible")trySync()},20000);
 })();
 </script></body></html>
