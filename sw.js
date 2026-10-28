@@ -1,4 +1,4 @@
-const C="antor-v4";
+const C="antor-v9";
 self.addEventListener("install",e=>e.waitUntil(
  caches.open(C).then(c=>Promise.all(["./","index.html"].map(u=>fetch(u,{cache:"reload"}).then(r=>r.ok&&c.put(u,r)).catch(()=>{})))).then(()=>self.skipWaiting())
 ));
