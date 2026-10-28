@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "shironamhinantor.github.io",
+    "sha256_cert_fingerprints": ["FF:79:47:79:E3:84:C9:F5:26:69:50:E9:88:6D:A7:3A:E9:E5:7C:EE:36:E0:FB:3D:C1:B8:2B:EA:C4:FA:07:2B"]
+  }
+}]
