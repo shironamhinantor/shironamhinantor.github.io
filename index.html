@@ -540,6 +540,42 @@ window.bkWarn=()=>{if(!vault||!(vault.files||[]).length)return"";
  if(Date.now()<sn)return"";const d=l?Math.floor((Date.now()-l)/864e5):999;if(d<30)return"";
  return`<div class="warn">💾 ${l?B(`${bn(d)} দিন ধরে ব্যাকআপ নেওয়া হয়নি`,`No backup for ${d} days`):B("এখনো কোনো ব্যাকআপ নেওয়া হয়নি","No backup taken yet")}<div class="acts" style="margin-top:8px"><button class="btn s" data-a="bk">⬇ ${B("এখন ব্যাকআপ","Backup now")}</button><button class="btn g s" data-a="x_bks">${B("৭ দিন পরে","Remind in 7 days")}</button></div></div>`};
 const _hX=V.home;V.home=()=>window.bkWarn()+_hX();
+
+/* ---------- always-available QR (works offline / locked): Both | Profile | CV ---------- */
+try{Object.assign(T.en,{share:"One-time CV QR (owner)"});Object.assign(T.bn,{share:"একবারের CV QR (মালিক)"})}catch(_){}
+window.QP=new URLSearchParams(location.search).get("q");
+window.openQP=m=>{
+ if(m==="p"){tab="profile";render();return}
+ const cv=PUB.find(p=>p.d.k==="cv"),d=$("#dlg");
+ d.innerHTML=`<div style="text-align:center;padding:10px 0"><h1 class="grad">${t("name")}</h1><p>${t("role")}</p><div class="acts" style="justify-content:center;margin-top:16px">${m==="c"?"":`<button class="btn" data-a="lp">👤 ${B("প্রোফাইল দেখুন","View profile")}</button>`}${cv?`<button class="btn g" data-a="lcx">⬇ ${B("CV ডাউনলোড","Download CV")}</button>`:(m==="c"?`<p>${B("CV এখনো প্রকাশ করা হয়নি","CV is not published yet")}</p>`:"")}</div></div>`;
+ d.showModal()};
+let qm="b";
+function qrStatic(){
+ const u=location.origin+location.pathname+"?q="+qm;let svg="";
+ try{const q=qrcode(0,"M");q.addData(u);q.make();svg=q.createSvgTag(6,2)}catch(_){svg=`<p>${B("QR লাইব্রেরি লোড হয়নি — একবার অনলাইনে অ্যাপ খুলুন","QR library not loaded — open the app once online")}</p>`}
+ const chip=(m,l)=>`<button class="btn s ${qm===m?"":"g"}" data-a="x_qm" data-qm="${m}">${l}</button>`,d=$("#dlg");
+ d.innerHTML=`<div class="acts" style="justify-content:space-between;margin-bottom:12px"><b>📱 ${B("QR কোড","QR code")}</b><button class="btn g s" data-a="close">${t("close")}</button></div><div class="acts" style="justify-content:center;margin-bottom:10px">${chip("b","👤+📄 "+B("দুটোই","Both"))}${chip("p","👤 "+B("প্রোফাইল","Profile"))}${chip("c","📄 CV")}</div><div class="qr">${svg}</div><p style="text-align:center;font-size:12px;word-break:break-all">${esc(u)}</p><p style="text-align:center;font-size:13px">${qm==="b"?B("স্ক্যান করলে প্রোফাইল ও CV — দুটো অপশনই আসবে","Scanning shows two options: Profile and CV"):qm==="p"?B("স্ক্যান করলে সরাসরি প্রোফাইল খুলবে","Scanning opens the profile directly"):B("স্ক্যান করলে CV ডাউনলোডের বাটন আসবে","Scanning shows the CV download button")}</p>`;
+ if(!d.open)d.showModal()}
+const ownerNow=()=>{try{return !!(au&&isOwner(au.currentUser))}catch(_){return false}};
+function qrGate(){
+ const d=$("#dlg");
+ d.innerHTML=`<div class="acts" style="justify-content:space-between;margin-bottom:10px"><b>📱 ${B("QR কোড","QR code")}</b><button class="btn g s" data-a="close">${t("close")}</button></div><p>${B("QR খুলতে ভল্টের পাসওয়ার্ড দিন","Enter your vault password to open the QR")}</p><input id="qg_pw" type="password" autocomplete="current-password"><div class="err" id="qg_e"></div><button class="btn" data-a="x_qgo">${B("খুলুন","Open")}</button>${bioSup()&&bioOn()?`<button class="btn g" data-a="x_qgb" style="margin-top:8px;width:100%">🧬 ${B("বায়োমেট্রিক","Biometric")}</button>`:""}`;
+ d.showModal()}
+async function qrVerify(pw){
+ const er=$("#qg_e");
+ try{const k=await derive(pw,unb(vault.salt));await open(k,vault.check)}
+ catch(_){if(er)er.textContent=B("পাসওয়ার্ড ভুল","Wrong password");return}
+ qm="b";qrStatic()}
+document.addEventListener("click",async e=>{
+ const x=e.target.closest&&e.target.closest('[data-a="x_qr"],[data-a="x_qm"],[data-a="x_qgo"],[data-a="x_qgb"]');if(!x)return;
+ const a=x.dataset.a;
+ if(a==="x_qm"){qm=x.dataset.qm||"b";qrStatic();return}
+ if(a==="x_qr"){if(!ownerNow())return;if(vault)qrGate();else{qm="b";qrStatic()}return}
+ if(a==="x_qgo"){await qrVerify((($("#qg_pw")||{}).value)||"");return}
+ if(a==="x_qgb"){let pw;try{pw=await bioGetPw()}catch(_){const er=$("#qg_e");if(er)er.textContent=B("বায়োমেট্রিক বাতিল বা ব্যর্থ","Biometric cancelled or failed");return}await qrVerify(pw)}
+});
+let lo=ownerNow();setInterval(()=>{const o=ownerNow();if(o!==lo){lo=o;try{render()}catch(_){}}},1000);
+const _hQ=V.home;V.home=()=>_hQ()+(ownerNow()?`<div class="glass"><button class="shb" data-a="x_qr"><i>${S('<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1"/>')}</i><span>${B("QR কোড","QR code")}</span><em>›</em></button></div>`:"");
 })();
 document.addEventListener("input",e=>{if(e.target.id==="q"&&$("#il"))$("#il").innerHTML=fnd(e.target.value)});
 document.addEventListener("click",async e=>{const x=e.target.closest("[data-a]");if(!x)return;const a=x.dataset.a,i=+x.dataset.i;
@@ -605,7 +641,7 @@ document.addEventListener("click",async e=>{const x=e.target.closest('[data-a="g
  else if(a==="cpull")await cloudPull();
  else if(a==="cpush")await W(async()=>{try{if(!fbOn())return;await login();await cloudPush();render();if(CS==="conflict")alert(B("ক্লাউডে নতুন ভল্ট আছে — আগে Pull করুন","Cloud has a newer vault — Pull first"))}catch(e){alert(e.message)}})});
 if("serviceWorker" in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{});
-(async()=>{if(!FB.projectId||!window.firebase||!fbOn()){if(QV)qrOpen(QV);return}try{const p=await db.collection("pub").doc("profile").get();PP=p.exists?p.data():null;PUB=(await db.collection("pubfiles").get()).docs.map(d=>({id:d.id,d:d.data()}))}catch(_){}render();const c=new URLSearchParams(location.search).get("c");if(c){tab="docs";getc(c)}else if(QV)qrOpen(QV)})();
+(async()=>{if(!FB.projectId||!window.firebase||!fbOn()){if(QV)qrOpen(QV);return}try{const p=await db.collection("pub").doc("profile").get();PP=p.exists?p.data():null;PUB=(await db.collection("pubfiles").get()).docs.map(d=>({id:d.id,d:d.data()}))}catch(_){}render();const c=new URLSearchParams(location.search).get("c");if(c){tab="docs";getc(c)}else if(QV)qrOpen(QV);else if(window.QP)window.openQP(window.QP)})();
 VL=(async()=>{let v=await dbGet();if(!v){try{const e=JSON.parse($("#vault").textContent);if(e&&e.salt)v=e}catch(_){}}vault=v||null;render()})();
 </script>
 <script>
