@@ -140,7 +140,7 @@ async function create(pw){const salt=crypto.getRandomValues(new Uint8Array(16));
 async function unlock(pw){const k=await derive(pw,unb(vault.salt));await open(k,vault.check);const out=[];for(const s of vault.files)out.push({s,d:await open(k,s)});key=k;files=out;IT=vault.it?await open(k,vault.it):[];QS=vault.qs?await open(k,vault.qs):[];FM=vault.fm?await open(k,vault.fm):[];UI=vault.uis?await open(k,vault.uis):{}}
 function lock(){key=null;files=[];IT=[];QS=[];FM=[];clearTimeout(timer);render()}
 function touch(){clearTimeout(timer);if(key)timer=setTimeout(lock,LK)}
-async function addFiles(list){busy=true;render();for(const f0 of list){const f=await window.shrink(f0);const d={n:f.name,t:f.type||"application/octet-stream",z:f.size,b:b64(await f.arrayBuffer()),k:cat};files.push({d,s:await seal(key,d)})}await persist();busy=false;touch();render()}
+async function addFiles(list){busy=true;render();for(const f of list){const d={n:f.name,t:f.type||"application/octet-stream",z:f.size,b:b64(await f.arrayBuffer()),k:cat};files.push({d,s:await seal(key,d)})}await persist();busy=false;touch();render()}
 const blobOf=f=>new Blob([unb(f.d.b)],{type:f.d.t});
 async function download(f){const bl=blobOf(f);try{const d=window.claude&&await claude.use("downloads");if(d){await d.save({filename:f.d.n,data:bl});return}}catch(e){}const a=document.createElement("a");a.href=URL.createObjectURL(bl);a.download=f.d.n;document.body.appendChild(a);a.click();a.remove()}
 let LP;function preview(f){LP=f;const bl=blobOf(f),u=URL.createObjectURL(bl);let h="";
@@ -218,7 +218,7 @@ const pwCard=()=>key?`<div class="glass"><h2>${t("chpw")}</h2><input id="np" typ
 const emerg=()=>{const p=pr();if(!p.blood&&!p.ecp)return"";return`<div class="glass sos"><h2>🚨 ${t("emg")}</h2>${p.blood?row(t("blood"),`<b style="color:#ff6369;font-size:20px">${esc(p.blood)}</b>`):""}${p.ecn?row(t("ecn"),esc(p.ecn)):""}${p.ecp?`<a class="btn r" style="margin-top:10px" href="tel:${esc(p.ecp.replace(/[^\d+]/g,""))}">📞 ${esc(p.ecp)}</a>`:""}</div>`};
 const links=()=>{const a=(pr().links||"").split(/\s+/).filter(u=>/^https?:\/\//i.test(u));return a.length?`<div class="glass"><h2>${t("linkh")}</h2><div class="chips">${a.map(u=>{let h=u;try{h=new URL(u).hostname.replace("www.","")}catch(_){}return`<a href="${esc(u)}" target="_blank" rel="noopener">🔗 ${esc(h)}</a>`}).join("")}</div></div>`:""};
 function showQR(){if(!key)return;const u=location.origin+location.pathname+"?v=1";let svg="";try{const q=qrcode(0,"M");q.addData(u);q.make();svg=q.createSvgTag(6,2)}catch(_){svg="<p>QR unavailable</p>"}const d=$("#dlg");d.innerHTML=`<div class="acts" style="justify-content:space-between;margin-bottom:12px"><b>${t("share")}</b><button class="btn g s" data-a="close">${t("close")}</button></div><div class="qr">${svg}</div><p style="text-align:center;font-size:12px;word-break:break-all">${esc(u)}</p><p style="text-align:center">${t("qrt")}</p>`;d.showModal()}
-const _h=V.home;V.home=()=>_h()+(!key?"":`<div class="glass"><button class="shb" data-a="qr"><i>${S('<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1"/>')}</i><span>${t("share")}</span><em>›</em></button></div>`);
+const _h=V.home;V.home=()=>_h()+(1?"":`<div class="glass"><button class="shb" data-a="qr"><i>${S('<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1"/>')}</i><span>${t("share")}</span><em>›</em></button></div>`);
 const _s0=V.set;const _s=()=>_s0()+pwCard();V.set=()=>_s()+`<div class="glass"><h2>${t("accent")}</h2><div class="sw">${AC.map((c,i)=>`<button data-ac="${i}" style="background:linear-gradient(135deg,${c[0]},${c[1]})"></button>`).join("")}</div></div>`;
 Object.assign(T.en,{clk12:"Clock format"});Object.assign(T.bn,{clk12:"ঘড়ির ফর্ম্যাট"});
 let H12=true;try{H12=localStorage.getItem("h12")!=="0"}catch(_){}
@@ -408,18 +408,7 @@ async function ceDel(){
  const u=U();u.cats=(u.cats||[]).filter(c=>c.k!==k);u.ord=(u.ord||[]).filter(x=>x!==k);u.hid=(u.hid||[]).filter(x=>x!==k);
  if(cat===k)cat=null;await saveUI();$("#dlg").close();render()}
 
-/* ---------- image shrink + camera ---------- */
-window.shrink=async f=>{try{
- if(!/^image\/(jpeg|png|webp)/i.test(f.type||"")&&!/\.(jpe?g|png|webp)$/i.test(f.name||""))return f;
- if(f.size<400*1024)return f;
- const bm=await createImageBitmap(f,{imageOrientation:"from-image"});
- const sc=Math.min(1,1800/Math.max(bm.width,bm.height)),c=document.createElement("canvas");
- c.width=Math.round(bm.width*sc);c.height=Math.round(bm.height*sc);
- const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,c.width,c.height);x.drawImage(bm,0,0,c.width,c.height);
- const bl=await new Promise(r=>c.toBlob(r,"image/jpeg",.82));
- if(!bl||bl.size>=f.size)return f;
- return new File([bl],(f.name||"image").replace(/\.\w+$/,"")+".jpg",{type:"image/jpeg"})
-}catch(_){return f}};
+/* ---------- camera scan ---------- */
 document.addEventListener("change",async e=>{
  if(e.target.id!=="cam")return;const l=[...e.target.files];e.target.value="";if(!l.length||!key)return;
  const d=new Date(),p=n=>String(n).padStart(2,"0"),sp=""+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+"_"+p(d.getHours())+p(d.getMinutes());
@@ -542,21 +531,28 @@ window.bkWarn=()=>{if(!vault||!(vault.files||[]).length)return"";
 const _hX=V.home;V.home=()=>window.bkWarn()+_hX();
 
 /* ---------- always-available QR (works offline / locked): Both | Profile | CV ---------- */
-try{Object.assign(T.en,{share:"One-time CV QR (owner)"});Object.assign(T.bn,{share:"একবারের CV QR (মালিক)"})}catch(_){}
 window.QP=new URLSearchParams(location.search).get("q");
 window.openQP=m=>{
  if(m==="p"){tab="profile";render();return}
  const cv=PUB.find(p=>p.d.k==="cv"),d=$("#dlg");
  d.innerHTML=`<div style="text-align:center;padding:10px 0"><h1 class="grad">${t("name")}</h1><p>${t("role")}</p><div class="acts" style="justify-content:center;margin-top:16px">${m==="c"?"":`<button class="btn" data-a="lp">👤 ${B("প্রোফাইল দেখুন","View profile")}</button>`}${cv?`<button class="btn g" data-a="lcx">⬇ ${B("CV ডাউনলোড","Download CV")}</button>`:(m==="c"?`<p>${B("CV এখনো প্রকাশ করা হয়নি","CV is not published yet")}</p>`:"")}</div></div>`;
  d.showModal()};
-let qm="b";
+let qm="p";
+function qrSvg(m){
+ const u=location.origin+location.pathname+"?q="+m;
+ try{const q=qrcode(0,"M");q.addData(u);q.make();const svg=q.createSvgTag(6,2);try{localStorage.setItem("qrc_"+m,svg)}catch(_){}return svg}
+ catch(_){try{return localStorage.getItem("qrc_"+m)||""}catch(__){return ""}}}
+try{["p","c","b"].forEach(qrSvg)}catch(_){}
 function qrStatic(){
- const u=location.origin+location.pathname+"?q="+qm;let svg="";
- try{const q=qrcode(0,"M");q.addData(u);q.make();svg=q.createSvgTag(6,2)}catch(_){svg=`<p>${B("QR লাইব্রেরি লোড হয়নি — একবার অনলাইনে অ্যাপ খুলুন","QR library not loaded — open the app once online")}</p>`}
+ const u=location.origin+location.pathname+"?q="+qm;
+ const svg=qrSvg(qm)||`<p>${B("QR লাইব্রেরি লোড হয়নি — একবার অনলাইনে অ্যাপ খুলুন","QR library not loaded — open the app once online")}</p>`;
+ let cvm=null;try{cvm=(PUB.find(p=>p.d.k==="cv")||{}).d||null}catch(_){}
+ let cvn="";try{if(cvm){cvn=cvm.n;localStorage.setItem("cvm",cvn)}else if(navigator.onLine&&PUB.length){localStorage.removeItem("cvm")}else cvn=localStorage.getItem("cvm")||""}catch(_){}
+ const cvp=qm==="p"?"":`<div style="margin-top:12px;text-align:center"><p style="font-size:13px;word-break:break-all">📄 ${cvn?esc(cvn)+" ✓":B("এখনো কোনো CV নেই","No CV yet")}</p><div class="acts" style="justify-content:center"><label class="btn g s">⬆ ${cvn?B("CV বদলান","Replace CV"):B("CV আপলোড","Upload CV")}<input id="cvup" type="file" accept=".pdf,.doc,.docx,application/pdf" hidden></label>${cvn?`<button class="btn r s" data-a="x_cvdel">🗑</button>`:""}</div></div>`;
  const chip=(m,l)=>`<button class="btn s ${qm===m?"":"g"}" data-a="x_qm" data-qm="${m}">${l}</button>`,d=$("#dlg");
- d.innerHTML=`<div class="acts" style="justify-content:space-between;margin-bottom:12px"><b>📱 ${B("QR কোড","QR code")}</b><button class="btn g s" data-a="close">${t("close")}</button></div><div class="acts" style="justify-content:center;margin-bottom:10px">${chip("b","👤+📄 "+B("দুটোই","Both"))}${chip("p","👤 "+B("প্রোফাইল","Profile"))}${chip("c","📄 CV")}</div><div class="qr">${svg}</div><p style="text-align:center;font-size:12px;word-break:break-all">${esc(u)}</p><p style="text-align:center;font-size:13px">${qm==="b"?B("স্ক্যান করলে প্রোফাইল ও CV — দুটো অপশনই আসবে","Scanning shows two options: Profile and CV"):qm==="p"?B("স্ক্যান করলে সরাসরি প্রোফাইল খুলবে","Scanning opens the profile directly"):B("স্ক্যান করলে CV ডাউনলোডের বাটন আসবে","Scanning shows the CV download button")}</p>`;
+ d.innerHTML=`<div class="acts" style="justify-content:space-between;margin-bottom:12px"><b>📱 ${B("QR কোড","QR code")}</b><button class="btn g s" data-a="close">${t("close")}</button></div><div class="acts" style="justify-content:center;margin-bottom:10px">${chip("p","👤 "+B("প্রোফাইল","Profile"))}${chip("c","📄 CV")}${chip("b","👤+📄 "+B("দুটোই","Both"))}</div><div class="qr">${svg}</div><p style="text-align:center;font-size:12px;word-break:break-all">${esc(u)}</p><p style="text-align:center;font-size:13px">${qm==="b"?B("স্ক্যান করলে প্রোফাইল ও CV — দুটো অপশনই আসবে","Scanning shows two options: Profile and CV"):qm==="p"?B("স্ক্যান করলে সরাসরি প্রোফাইল খুলবে","Scanning opens the profile directly"):B("স্ক্যান করলে CV ডাউনলোডের বাটন আসবে","Scanning shows the CV download button")}</p>${cvp}`;
  if(!d.open)d.showModal()}
-const ownerNow=()=>{try{return !!(au&&isOwner(au.currentUser))}catch(_){return false}};
+const ownerNow=()=>{try{if(au&&isOwner(au.currentUser))return true}catch(_){}try{return !navigator.onLine&&localStorage.getItem("own")==="1"}catch(_){return false}};
 function qrGate(){
  const d=$("#dlg");
  d.innerHTML=`<div class="acts" style="justify-content:space-between;margin-bottom:10px"><b>📱 ${B("QR কোড","QR code")}</b><button class="btn g s" data-a="close">${t("close")}</button></div><p>${B("QR খুলতে ভল্টের পাসওয়ার্ড দিন","Enter your vault password to open the QR")}</p><input id="qg_pw" type="password" autocomplete="current-password"><div class="err" id="qg_e"></div><button class="btn" data-a="x_qgo">${B("খুলুন","Open")}</button>${bioSup()&&bioOn()?`<button class="btn g" data-a="x_qgb" style="margin-top:8px;width:100%">🧬 ${B("বায়োমেট্রিক","Biometric")}</button>`:""}`;
@@ -565,17 +561,47 @@ async function qrVerify(pw){
  const er=$("#qg_e");
  try{const k=await derive(pw,unb(vault.salt));await open(k,vault.check)}
  catch(_){if(er)er.textContent=B("পাসওয়ার্ড ভুল","Wrong password");return}
- qm="b";qrStatic()}
+ qm="p";qrStatic()}
 document.addEventListener("click",async e=>{
  const x=e.target.closest&&e.target.closest('[data-a="x_qr"],[data-a="x_qm"],[data-a="x_qgo"],[data-a="x_qgb"]');if(!x)return;
  const a=x.dataset.a;
- if(a==="x_qm"){qm=x.dataset.qm||"b";qrStatic();return}
- if(a==="x_qr"){if(!ownerNow())return;if(vault)qrGate();else{qm="b";qrStatic()}return}
+ if(a==="x_qm"){qm=x.dataset.qm||"p";qrStatic();return}
+ if(a==="x_qr"){if(!ownerNow())return;if(vault)qrGate();else{qm="p";qrStatic()}return}
  if(a==="x_qgo"){await qrVerify((($("#qg_pw")||{}).value)||"");return}
  if(a==="x_qgb"){let pw;try{pw=await bioGetPw()}catch(_){const er=$("#qg_e");if(er)er.textContent=B("বায়োমেট্রিক বাতিল বা ব্যর্থ","Biometric cancelled or failed");return}await qrVerify(pw)}
 });
-let lo=ownerNow();setInterval(()=>{const o=ownerNow();if(o!==lo){lo=o;try{render()}catch(_){}}},1000);
+let lo=ownerNow();const t0=Date.now();
+setInterval(()=>{
+ try{
+  if(au&&isOwner(au.currentUser))localStorage.setItem("own","1");
+  else if(au&&navigator.onLine&&!au.currentUser&&Date.now()-t0>6000)localStorage.removeItem("own");
+ }catch(_){}
+ const o=ownerNow();if(o!==lo){lo=o;try{render()}catch(_){}}},1000);
+document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest('[data-a="gso"]')){try{localStorage.removeItem("own")}catch(_){}}},true);
+window.addEventListener("online",()=>{try{render()}catch(_){}});window.addEventListener("offline",()=>{try{render()}catch(_){}});
+document.addEventListener("change",async e=>{
+ if(e.target.id!=="cvup")return;const f=e.target.files&&e.target.files[0];e.target.value="";if(!f)return;
+ if(!navigator.onLine||!fbOn())return alert(B("CV আপলোডে ইন্টারনেট লাগবে","Internet is needed to upload the CV"));
+ if(f.size>3e7)return alert(B("৩০ MB-এর বেশি নয়","Max 30 MB"));
+ await W(async()=>{try{
+  await login();const bs=b64(await f.arrayBuffer());
+  for(const p of PUB.filter(q=>q.d.k==="cv"))await wipe(db.collection("pubfiles").doc(p.id),p.d.c||0);
+  const id="p"+Date.now(),r=db.collection("pubfiles").doc(id),n=await put(r,bs),d={n:f.name,t:f.type||"application/octet-stream",c:n,k:"cv"};
+  await r.set(d);PUB=PUB.filter(q=>q.d.k!=="cv");PUB.push({id,d});qrStatic()
+ }catch(err){alert(err.message)}})});
+document.addEventListener("click",async e=>{
+ const x=e.target.closest&&e.target.closest('[data-a="x_cvdel"]');if(!x)return;
+ if(!navigator.onLine||!fbOn())return alert(B("ইন্টারনেট লাগবে","Internet is needed"));
+ if(!confirm(B("পাবলিশ করা CV মুছবেন?","Remove the published CV?")))return;
+ await W(async()=>{try{await login();for(const p of PUB.filter(q=>q.d.k==="cv"))await wipe(db.collection("pubfiles").doc(p.id),p.d.c||0);PUB=PUB.filter(q=>q.d.k!=="cv");try{localStorage.removeItem("cvm")}catch(_){}qrStatic()}catch(err){alert(err.message)}})});
 const _hQ=V.home;V.home=()=>_hQ()+(ownerNow()?`<div class="glass"><button class="shb" data-a="x_qr"><i>${S('<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1"/>')}</i><span>${B("QR কোড","QR code")}</span><em>›</em></button></div>`:"");
+/* ---------- stop the page "blinking" on background re-renders ---------- */
+{const H=document.documentElement,sty=document.createElement("style");
+ sty.textContent="html.nq .glass{animation:none!important}";document.head.appendChild(sty);
+ setTimeout(()=>H.classList.add("nq"),700);
+ document.addEventListener("click",e=>{
+  if(e.target.closest&&e.target.closest("[data-tab],[data-cat]")){H.classList.remove("nq");clearTimeout(window.__nq);window.__nq=setTimeout(()=>H.classList.add("nq"),800)}
+ },true)}
 })();
 document.addEventListener("input",e=>{if(e.target.id==="q"&&$("#il"))$("#il").innerHTML=fnd(e.target.value)});
 document.addEventListener("click",async e=>{const x=e.target.closest("[data-a]");if(!x)return;const a=x.dataset.a,i=+x.dataset.i;
