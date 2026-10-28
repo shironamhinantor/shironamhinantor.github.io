@@ -277,7 +277,7 @@ else if(D.a==="qr")showQR();
 else if(D.a==="chpw"){const v=g("np");if(v.length<8){msg=t("short");return render()}busy=true;render();await chpw(v);busy=false;msg=t("done");render()}
 else if(D.cat!==undefined){cat=D.cat||null;render()}
 else if(D.a==="cancel"){editing=false;render()}
-else if(D.a==="save"){collect();{const{by:_by,...pp}=dr;vault.profile={...pp,edu:dr.edu.filter(e=>e.deg||e.inst)};DBY=_by||"";vault.dby=await seal(key,{y:DBY})}await persist();editing=false;scrollTo(0,0);render();pubp(true)}
+else if(D.a==="save"){collect();{const{by:_by,...pp}=dr;vault.profile={...pp,edu:dr.edu.filter(e=>e.deg||e.inst)};DBY=_by||"";vault.dby=await seal(key,{y:DBY})}vault.pts=Date.now();await persist();editing=false;scrollTo(0,0);render();pubp(true);profPush()}
 else if(D.tab){tab=D.tab;msg="";scrollTo(0,0);render()}
 else if(D.l){L=D.l;try{localStorage.setItem("l",L)}catch(_){}render()}
 else if(D.th){document.documentElement.dataset.theme=D.th}
@@ -901,7 +901,7 @@ document.addEventListener("click",e=>{const x=e.target.closest('[data-a="vz"]');
 document.addEventListener("dblclick",e=>{if(e.target.closest("#vb img, #vb .pg")){ZI=(ZI+1)%ZL.length;zapply()}});
 
 /* ---------- cloud sync: silent, automatic, no buttons ---------- */
-let SB=0,SP=0;
+let SB=0,SP=0;let SYE="",LV=null,LSY=0,PPT=0;
 const owner=()=>{try{return !!au&&isOwner(au.currentUser)}catch(_){return false}};
 const setSS=s=>{if(s==="ok"||s==="busy"||s==="err")CS=s==="ok"?"ok":CS==="ok"?"":CS};
 const put2=async(r,str)=>{const n=Math.ceil(str.length/CH);let i=0;const w=async()=>{while(i<n){const k=i++;await r.collection("c").doc(""+k).set({d:str.slice(k*CH,(k+1)*CH)})}};await Promise.all([w(),w(),w(),w()]);return n};
@@ -910,10 +910,10 @@ cloudPush=async function(force){
  try{const r=db.collection("vault").doc("main"),m=await r.get(),ct=m.exists?m.data().t:0;
   if(m.exists&&ct>(vault.sy||0)&&!force){SB=0;return autoSync()}
   const old=m.exists?m.data().c:0;let t=vault.ts=vault.ts||Date.now();if(t<=ct){t=vault.ts=ct+1}
-  const o={...vault};delete o.sy;const n=await put2(r,JSON.stringify(o));await r.set({c:n,t});
+  const o={...vault};delete o.sy;const n=await put2(r,JSON.stringify(o));await r.set({c:n,t,...pfFields(m)},{merge:true});
   for(let k=n;k<old;k++)await r.collection("c").doc(""+k).delete();
-  vault.sy=t;await dbSet(vault);CS="ok"}
- catch(e){CS=""}
+  vault.sy=t;await dbSet(vault);CS="ok";SYE="";LSY=Date.now()}
+ catch(e){CS="";SYE=(e&&(e.code||e.message))||"error"}
  finally{SB=0;if(SP){SP=0;setTimeout(()=>cloudPush().catch(()=>{}),400)}}};
 pullFrom=async function(r,m){
  const v=JSON.parse(await take(r,m.data().c));v.sy=v.ts=m.data().t;
@@ -942,14 +942,28 @@ autoSync=async function(){
   const ct=m.data().t,sy=vault?(vault.sy||0):0,ts=vault?(vault.ts||0):0;
   if(!vault||(fresh&&sy<ct)||(sy<ct&&ts<=sy)){SB=0;await pullFrom(r,m);return}
   if(sy<ct){SB=0;await mergeBoth(r,m);return}
-  if(ts>sy)next=1;else CS="ok"}
- catch(e){CS=""}
+  if(ts>sy)next=1;else{CS="ok";SYE="";LSY=Date.now()}}
+ catch(e){CS="";SYE=(e&&(e.code||e.message))||"error"}
  finally{SB=0;if(next)cloudPush().catch(()=>{})}};
 const trySync=()=>{try{if(owner()&&navigator.onLine&&!editing&&!busy)autoSync().catch(()=>{})}catch(_){}};
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")trySync()});
 addEventListener("online",trySync);
 addEventListener("focus",trySync);
 setInterval(()=>{if(document.visibilityState==="visible")trySync()},20000);
+
+/* ---------- fast profile sync + realtime + sync status ---------- */
+const pfFields=m=>{try{if(!vault||!vault.profile)return{};const rp=(m&&m.exists&&m.data().pft)||0;if((vault.pts||0)<rp)return{};const pf=JSON.stringify(vault.profile);if(pf.length>850000)return{};return{pf,pft:vault.pts||0}}catch(_){return{}}};
+async function profPush(){try{if(!owner()||!vault||!vault.profile)return;const r=db.collection("vault").doc("main"),m=await r.get();if(!m.exists)return;const f=pfFields(m);if(!f.pf)return;await r.set(f,{merge:true});SYE="";LSY=Date.now()}catch(e){SYE=(e&&(e.code||e.message))||"error"}}
+async function applyPf(d){if(!d||!d.pf||!vault||editing)return false;const rt=d.pft||0;if(rt<=(vault.pts||0))return false;let p;try{p=JSON.parse(d.pf)}catch(_){return false}vault.profile=p;vault.pts=rt;await dbSet(vault);LSY=Date.now();if(!busy)render();return true}
+{const _pf0=pullFrom;pullFrom=async function(r,m){await _pf0(r,m);try{await applyPf(m.data())}catch(_){}SYE="";LSY=Date.now()}}
+function startLive(){if(LV||!owner())return;try{LV=db.collection("vault").doc("main").onSnapshot(s=>{if(!s.exists)return;const d=s.data();applyPf(d).catch(()=>{});if(!s.metadata.hasPendingWrites&&vault&&(d.t||0)>(vault.sy||0))trySync()},()=>{LV=null})}catch(_){LV=null}}
+async function pubRefresh(){if(Date.now()-PPT<30000||!db||editing||owner())return;PPT=Date.now();try{const p=await db.collection("pub").doc("profile").get(),n=p.exists?p.data():null;if(JSON.stringify(n)!==JSON.stringify(PP)){PP=n;if(!busy)render()}}catch(_){}}
+setInterval(()=>{try{startLive();if(document.visibilityState==="visible")pubRefresh()}catch(_){}},4000);
+async function syncNow(){if(!owner()){alert(B("আগে Owner sign-in করুন","Please sign in as owner first"));return}SYE="";SB=0;try{const r=db.collection("vault").doc("main"),m=await r.get();if(m.exists)await applyPf(m.data());await autoSync();if(vault&&(vault.ts||0)>(vault.sy||0))await cloudPush();await profPush();if(!SYE)LSY=Date.now()}catch(e){SYE=(e&&(e.code||e.message))||"error"}render()}
+const syState=()=>{if(!owner())return{c:"off",t:B("সাইন-ইন নেই, তাই সিঙ্ক বন্ধ। নিচের Owner sign-in থেকে Google দিয়ে সাইন-ইন করুন (পিসি ও ফোন দুই জায়গাতেই)।","Not signed in, so sync is off. Use Owner sign-in below (on both PC and phone).")};if(SYE)return{c:"err",t:B("সিঙ্ক ব্যর্থ: ","Sync failed: ")+SYE};if(vault&&(vault.ts||0)>(vault.sy||0))return{c:"wait",t:B("পাঠানো হচ্ছে…","Syncing…")};return{c:"ok",t:B("✓ সিঙ্ক ঠিক আছে","✓ In sync")+(LSY?" · "+new Date(LSY).toLocaleTimeString():"")}};
+const syCard=()=>{const x=syState();return`<div class="glass"><h2>${B("সিঙ্ক","Sync")}</h2><p style="font-size:13px;margin:6px 0 10px">${esc(x.t)}</p><button class="btn g s" data-a="synow">${B("এখনই সিঙ্ক করুন","Sync now")}</button></div>`};
+{const _sy1=V.set;V.set=()=>syCard()+_sy1()}
+document.addEventListener("click",async e=>{if(!e.target.closest('[data-a="synow"]'))return;await syncNow()});
 
 /* ---------- cover photo ---------- */
 document.head.insertAdjacentHTML("beforeend","<style>.cover{height:150px;border-radius:24px;background:var(--card) center/cover no-repeat;border:1px solid var(--bd);box-shadow:0 10px 40px rgba(0,0,0,.12)}.cover.empty{display:grid;place-items:center;color:var(--mut);font-size:13px}.cover.top{margin-bottom:14px}#cvblk{margin-bottom:14px}.hero.hascv{background-size:cover!important;background-position:center!important;border-color:rgba(255,255,255,.25)}.hero.hascv h1,.hero.hascv p,.hero.hascv .hi{color:#fff!important;text-shadow:0 2px 12px rgba(0,0,0,.55)}.hero.hascv .grad{background:none!important;-webkit-text-fill-color:#fff!important;color:#fff!important}.hero.hascv .pill{background:rgba(0,0,0,.45);color:#fff}</style>");
