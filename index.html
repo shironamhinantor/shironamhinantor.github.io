@@ -305,7 +305,7 @@ Object.assign(T.en,{c_marriage:"Marriage Certificate",c_family:"Family"});
 Object.assign(T.bn,{c_marriage:"বিবাহ নিবন্ধন সনদ",c_family:"পরিবার"});
 async function saveFM(){vault.fm=await seal(key,FM);await persist()}
 const fmOf=c=>(c||"").startsWith("f:")?FM.find(m=>m.id===c.slice(2)):null;
-const FMR=[["বাবা","Father"],["মা","Mother"],["স্ত্রী","Wife"],["স্বামী","Husband"],["ছেলে","Son"],["মেয়ে","Daughter"],["ভাই","Brother"],["বোন","Sister"]];
+const FMR=[["বাবা","Father"],["মা","Mother"],["স্ত্রী","Wife"],["ছেলে","Son"],["মেয়ে","Daughter"],["ভাই","Brother"]];
 const fmRelOf=n=>FMR.some(r=>r[0]===n||r[1]===n)?n:"";
 const QRI='<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1"/>';
 const FMI={bd:'<path d="M4 20h16v-6a2 2 0 00-2-2H6a2 2 0 00-2 2z"/><path d="M4 16.5c2 1.3 3 1.3 4 0s2-1.3 4 0 3 1.3 4 0 2-1.3 4 0M12 12V8.5M12 5v.5"/>',tel:'<path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z"/>',bg:'<path d="M12 3s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z"/>',nid:'<rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.5-2 5.5-2 6 0M14 10h4M14 14h3"/>',note:'<path d="M5 4h14v16H5z"/><path d="M8 9h8M8 13h8M8 17h5"/>',rel:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 3-6 6.5-6s6.5 2.4 6.5 6M16 5a3.5 3.5 0 010 6.5M18.5 14.5c2 .8 3 2.6 3 5.5"/>',user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>',cam:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'};
