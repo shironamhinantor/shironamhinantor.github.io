@@ -153,16 +153,18 @@ async function seal(k,o){const iv=crypto.getRandomValues(new Uint8Array(12));ret
 async function open(k,o){return JSON.parse(dec.decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:unb(o.iv)},k,unb(o.ct))))}
 /* storage */
 const idb=()=>new Promise((r,j)=>{const q=indexedDB.open("antor",1);q.onupgradeneeded=()=>q.result.createObjectStore("s");q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error)});
-async function dbGet(){try{const d=await idb();return await new Promise(r=>{const q=d.transaction("s").objectStore("s").get("v");q.onsuccess=()=>r(q.result);q.onerror=()=>r(null)})}catch(e){return null}}
-async function dbSet(v){try{const d=await idb();d.transaction("s","readwrite").objectStore("s").put(v,"v")}catch(e){}}
-const persist=()=>{vault.files=files.map(f=>f.s);vault.ts=Date.now();const p=dbSet(vault);schedPush();return p};
+async function dbGet(){let d;try{d=await idb();return await new Promise((r,j)=>{const tx=d.transaction("s","readonly"),q=tx.objectStore("s").get("v");q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error);tx.onabort=()=>j(tx.error||new Error("IndexedDB read aborted"))})}catch(e){return null}finally{try{d&&d.close()}catch(_){}}}
+async function dbSet(v){let d;try{d=await idb();await new Promise((r,j)=>{const tx=d.transaction("s","readwrite");tx.objectStore("s").put(v,"v");tx.oncomplete=()=>r();tx.onerror=()=>j(tx.error||new Error("IndexedDB write failed"));tx.onabort=()=>j(tx.error||new Error("IndexedDB write aborted"))})}finally{try{d&&d.close()}catch(_){}}}
+let persistQueue=Promise.resolve();
+const queueDBSet=v=>{const snapshot=JSON.parse(JSON.stringify(v));persistQueue=persistQueue.catch(()=>{}).then(()=>dbSet(snapshot));return persistQueue};
+const persist=()=>{if(!vault)return Promise.resolve();vault.files=files.map(f=>f.s);vault.ts=Math.max(Date.now(),(vault.ts||0)+1);const p=queueDBSet(vault);try{schedPush()}catch(_){}return p};
 /* vault ops */
 let UI={};
 async function create(pw){const salt=crypto.getRandomValues(new Uint8Array(16));key=await derive(pw,salt);vault={salt:b64(salt),check:await seal(key,{ok:1}),files:[]};files=[];await persist()}
 async function unlock(pw){const k=await derive(pw,unb(vault.salt));await open(k,vault.check);const out=[];for(const s of vault.files)out.push({s,d:await open(k,s)});key=k;files=out;IT=vault.it?await open(k,vault.it):[];QS=vault.qs?await open(k,vault.qs):[];FM=vault.fm?await open(k,vault.fm):[];UI=vault.uis?await open(k,vault.uis):{};CAL=vault.cal?await open(k,vault.cal):[];DBY=vault.dby?((await open(k,vault.dby)).y||""):""}
-function lock(){key=null;files=[];IT=[];QS=[];FM=[];CAL=[];DBY="";clearTimeout(timer);render()}
+function lock(){clearTimeout(timer);key=null;files=[];IT=[];QS=[];QRX=[];FM=[];CAL=[];DBY="";editing=false;dr=null;pend=null;CVK="";try{const d=$("#dlg");if(d&&d.open)d.close()}catch(_){}try{vclean()}catch(_){}render()}
 function touch(){clearTimeout(timer);if(key)timer=setTimeout(lock,LK)}
-async function addFiles(list){busy=true;render();for(const f of list){const d={n:f.name,t:f.type||"application/octet-stream",z:f.size,b:b64(await f.arrayBuffer()),k:cat};files.push({d,s:await seal(key,d)})}await persist();busy=false;touch();render()}
+async function addFiles(list){busy=true;render();for(const f of list){const d={id:"f"+(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2)),n:f.name,t:f.type||"application/octet-stream",z:f.size,b:b64(await f.arrayBuffer()),k:cat};files.push({d,s:await seal(key,d)})}await persist();busy=false;touch();render()}
 const blobOf=f=>new Blob([unb(f.d.b)],{type:f.d.t});
 async function download(f){const bl=blobOf(f);try{const d=window.claude&&await claude.use("downloads");if(d){await d.save({filename:f.d.n,data:bl});return}}catch(e){}const a=document.createElement("a");a.href=URL.createObjectURL(bl);a.download=f.d.n;document.body.appendChild(a);a.click();a.remove()}
 let LP;function preview(f){LP=f;const bl=blobOf(f),u=URL.createObjectURL(bl);let h="";
@@ -269,7 +271,7 @@ $("#tabs").innerHTML=tb.map(([k,i])=>`<button data-tab="${k}" class="${tab===k?"
 document.documentElement.lang=L;{const ph=editing&&key&&dr?dr.photo:pr().photo;document.querySelectorAll(".av").forEach(a=>{a.innerHTML=ph?`<img src="${ph}" alt="" style="width:100%;height:100%;object-fit:cover">`:esc(ini(rv("name","name")))})}const u=$("#up");if(u)u.onchange=e=>addFiles([...e.target.files]);}
 document.addEventListener("click",async e=>{const x=e.target.closest("[data-tab],[data-a],[data-l],[data-th],[data-v],[data-d],[data-x],[data-c],[data-xe],[data-ac],[data-cat],[data-h]");if(!x)return;touch();const D=x.dataset;
 if(D.c){const f=files.find(q=>q.d.e===D.c);if(key){if(f)preview(f)}else{pend=D.c;tab="docs";render()}}
-else if(D.xe!==undefined){collect();const e=dr.edu.splice(+D.xe,1)[0];files=files.filter(q=>q.d.e!==e.id);await persist();render()}
+else if(D.xe!==undefined){collect();const e=dr.edu.splice(+D.xe,1)[0];for(const f of files.filter(q=>q.d.e===e.id))await markDeleted("files",await fileKey(f.d));files=files.filter(q=>q.d.e!==e.id);await persist();render()}
 else if(D.ac!==undefined){ap(+D.ac);try{localStorage.setItem("ac",D.ac)}catch(_){}}
 else if(D.a==="edit"){if(key)startEdit();else{pend="edit";tab="docs";render()}}
 else if(D.a==="adde"){collect();dr.edu.push({id:"e"+Date.now(),deg:"",inst:"",per:""});render()}
@@ -284,7 +286,7 @@ else if(D.l){L=D.l;try{localStorage.setItem("l",L)}catch(_){}render()}
 else if(D.th){document.documentElement.dataset.theme=D.th}
 else if(D.v!==undefined)preview(files[D.v]);
 else if(D.d!==undefined)download(files[D.d]);
-else if(D.x!==undefined){if(confirm(t("confirm"))){files.splice(+D.x,1);await persist();render()}}
+else if(D.x!==undefined){if(confirm(t("confirm"))){const f=files[+D.x];if(f)await markDeleted("files",await fileKey(f.d));files.splice(+D.x,1);await persist();render()}}
 else if(D.a==="close")$("#dlg").close();
 else if(D.a==="lock")lock();
 else if(D.a==="export")exportSite();
@@ -297,7 +299,7 @@ setInterval(tick,1000);
 try{const a=localStorage.getItem("ac");if(a)ap(+a)}catch(_){}
 document.addEventListener("change",async e=>{const x=e.target,f=x.files&&x.files[0];if(!f||!key||!dr)return;
 if(x.id==="ph"){collect();const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const c=document.createElement("canvas");c.width=c.height=320;const m=Math.min(im.width,im.height);c.getContext("2d").drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,320,320);dr.photo=c.toDataURL("image/jpeg",.82);render()};im.src=r.result};r.readAsDataURL(f)}
-else if(x.classList.contains("cf")){collect();const ed=dr.edu[+x.dataset.e];files=files.filter(q=>q.d.e!==ed.id);const d={n:f.name,t:f.type||"application/octet-stream",z:f.size,b:b64(await f.arrayBuffer()),e:ed.id};files.push({d,s:await seal(key,d)});ed.cert=true;await persist();render()}});
+else if(x.classList.contains("cf")){collect();const ed=dr.edu[+x.dataset.e];for(const old of files.filter(q=>q.d.e===ed.id))await markDeleted("files",await fileKey(old.d));files=files.filter(q=>q.d.e!==ed.id);const d={id:"f"+(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2)),n:f.name,t:f.type||"application/octet-stream",z:f.size,b:b64(await f.arrayBuffer()),e:ed.id};files.push({d,s:await seal(key,d)});ed.cert=true;await persist();render()}});
 
 
 /* ===== Family members (encrypted list; files live under k="f:<id>") ===== */
@@ -336,7 +338,7 @@ document.addEventListener("click",async e=>{const x=e.target.closest('[data-a="a
  if(a==="addm"){const i=document.getElementById("fm_n"),n=((i&&i.value)||"").trim();if(!n||!key)return;FM.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),n,rel:fmRelOf(n)});await saveFM();render();return}
  if(a==="delm"){const m=FM.find(q=>q.id===x.dataset.m);if(!m)return;const k="f:"+m.id,c=files.filter(f=>fk(f)===k).length;
   if(!confirm(B(`"${m.n}" এবং তার ${c}টি ফাইল মুছে যাবে। চালিয়ে যাবেন?`,`Delete "${m.n}" and ${c} file(s)?`)))return;
-  files=files.filter(f=>fk(f)!==k);FM=FM.filter(q=>q.id!==m.id);vault.fm=await seal(key,FM);await persist();render()}});
+  for(const f of files.filter(f=>fk(f)===k))await markDeleted("files",await fileKey(f.d));await markDeleted("fm",m.id);files=files.filter(f=>fk(f)!==k);FM=FM.filter(q=>q.id!==m.id);vault.fm=await seal(key,FM);await persist();render()}});
 /* ===== Finder + Firebase sharing ===== */
 const B=(b,e)=>L==="bn"?b:e;
 const FB={apiKey:"AIzaSyCbHh-1r6NvCi68wGtxOAHRCEvUX9c3nmg",authDomain:"my-pofile.firebaseapp.com",projectId:"my-pofile",appId:"1:240273747170:web:0d62e08a11f9c2bb8842bb"}; // <-- Firebase config এখানে বসান
@@ -382,7 +384,7 @@ async function login(){
  if(!isOwner(r.user)){await au.signOut();throw new Error(OWNER_MSG())}
 }
 const save=async()=>{vault.it=await seal(key,IT);await persist()};
-const CH=9e5;
+const CH=2e5;
 const W=async f=>{document.body.style.opacity=.6;try{return await f()}finally{document.body.style.opacity=""}};
 const put=async(r,str)=>{const n=Math.ceil(str.length/CH);for(let k=0;k<n;k++)await r.collection("c").doc(""+k).set({d:str.slice(k*CH,(k+1)*CH)});return n};
 const take=async(r,n)=>(await Promise.all(Array.from({length:n},(_,k)=>r.collection("c").doc(""+k).get()))).map(d=>d.data().d).join("");
@@ -438,7 +440,7 @@ return`${calBanner()}<div class="glass"><div class="acts" style="justify-content
 ${all.length?`<div class="glass"><h2>${B("সব সেভ করা","All saved")} · ${nb(all.length)}</h2>${all.map(e=>calRow(e)).join("")}<div class="acts" style="margin-top:12px"><button class="btn g" data-a="cal_icsall">📲 ${B("ফোনের ক্যালেন্ডারে নিন (.ics)","Add all to phone calendar (.ics)")}</button></div></div>`:""}
 <div class="glass"><h2>🔔 ${B("রিমাইন্ডার","Reminders")}</h2><p style="font-size:13px">${B("অ্যাপ খুলে ভল্ট আনলক করলে আজকের ও আসন্ন ইভেন্ট ওপরে দেখাবে। অ্যাপ বন্ধ থাকলেও ফোন বাজাতে চাইলে 📲 দিয়ে ফোনের নিজস্ব ক্যালেন্ডারে যোগ করুন, সেখানে প্রতি বছর অ্যালার্ম আসবে।","Today's and upcoming events show on top when you unlock the app. To be alerted even when the app is closed, add events to your phone calendar with 📲; it will alert every year.")}</p>${notif==="default"?`<button class="btn g s" data-a="cal_nt">🔔 ${B("নোটিফিকেশন চালু করুন","Enable notifications")}</button>`:notif==="granted"?`<p style="font-size:12px">✓ ${B("নোটিফিকেশন চালু","Notifications on")}</p>`:notif==="denied"?`<p style="font-size:12px">${B("নোটিফিকেশন বন্ধ (ব্রাউজার সেটিংস থেকে চালু করুন)","Notifications blocked (enable in browser settings)")}</p>`:""}</div>`};
 const icsEsc=s=>String(s||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\r?\n/g,"\\n");
-const icsEv=e=>{const r=+e.r||0,h=r*24-9;return["BEGIN:VEVENT","UID:"+e.id+"@antor-digital-id","DTSTAMP:"+new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+/,""),"DTSTART;VALUE=DATE:"+e.d.replace(/-/g,""),e.y?"RRULE:FREQ=YEARLY":"","SUMMARY:"+icsEsc(kOf(e)[0]+" "+e.t),e.n?"DESCRIPTION:"+icsEsc(e.n):"","BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+icsEsc(e.t),"TRIGGER:"+(h>0?"-PT"+h+"H":"PT9H"),"END:VALARM","END:VEVENT"].filter(Boolean).join("\r\n")};
+const icsEv=e=>{const days=Math.max(0,Math.min(365,+e.r||0)),trigger=days?"-P"+days+"D":"PT0S";return["BEGIN:VEVENT","UID:"+icsEsc(e.id)+"@antor-digital-id","DTSTAMP:"+new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+/,""),"DTSTART;VALUE=DATE:"+e.d.replace(/-/g,""),e.y?"RRULE:FREQ=YEARLY":"","SUMMARY:"+icsEsc(kOf(e)[0]+" "+e.t),e.n?"DESCRIPTION:"+icsEsc(e.n):"","BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+icsEsc(e.t),"TRIGGER;RELATED=START:"+trigger,"END:VALARM","END:VEVENT"].filter(Boolean).join("\r\n")};
 const icsDl=(list,name)=>{const t="BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Antor Digital ID//BN\r\nCALSCALE:GREGORIAN\r\n"+list.map(icsEv).join("\r\n")+"\r\nEND:VCALENDAR\r\n",a=document.createElement("a");a.href=URL.createObjectURL(new Blob([t],{type:"text/calendar"}));a.download=name+".ics";document.body.appendChild(a);a.click();a.remove()};
 document.addEventListener("click",async e=>{const x=e.target.closest('[data-a^="cal_"]');if(!x||!key)return;const a=x.dataset.a,ev=CAL.find(q=>q.id===x.dataset.id);
  if(a==="cal_p"){calM--;if(calM<0){calM=11;calY--}render()}
@@ -446,7 +448,7 @@ document.addEventListener("click",async e=>{const x=e.target.closest('[data-a^="
  else if(a==="cal_t"){const t=td0();calY=t.getFullYear();calM=t.getMonth();calSel=ymd(t);render()}
  else if(a==="cal_d"){calSel=x.dataset.ds;render()}
  else if(a==="cal_add"){const t=(($("#c_t")||{}).value||"").trim(),d=($("#c_d")||{}).value;if(!t||!d){alert(B("শিরোনাম ও তারিখ দিন","Enter a title and a date"));return}CAL.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),t,d,k:$("#c_k").value,y:$("#c_y").checked,r:+$("#c_r").value,n:$("#c_n").value.trim()});await saveCAL();render()}
- else if(a==="cal_del"){if(ev&&confirm(B("মুছে ফেলবেন?","Delete this?"))){CAL=CAL.filter(q=>q.id!==ev.id);await saveCAL();render()}}
+ else if(a==="cal_del"){if(ev&&confirm(B("মুছে ফেলবেন?","Delete this?"))){await markDeleted("cal",ev.id);CAL=CAL.filter(q=>q.id!==ev.id);await saveCAL();render()}}
  else if(a==="cal_ics"){if(ev)icsDl([ev],"event")}
  else if(a==="cal_icsall"){if(CAL.length)icsDl(CAL,"my-calendar")}
  else if(a==="cal_hj"){try{localStorage.setItem("hj",x.dataset.hv)}catch(_){}render()}
@@ -684,9 +686,10 @@ document.addEventListener("change",async e=>{
  if(f.size>3e7)return alert(B("৩০ MB-এর বেশি নয়","Max 30 MB"));
  const oc=cat;
  try{
+  for(const old of files.filter(q=>fk(q)==="cv"))await markDeleted("files",await fileKey(old.d));
   files=files.filter(q=>fk(q)!=="cv");cat="cv";
   await addFiles([f]);cat=oc;
-  QS=[];await saveQS();await showQR()
+  QRX=[...new Set([...(QRX||[]),...QS])];QS=[];await saveQS();await showQR()
  }catch(err){cat=oc;alert(err.message)}});
 let lo=ownerNow();const t0=Date.now();
 setInterval(()=>{
@@ -729,8 +732,8 @@ const _hQ=V.home;V.home=()=>_hQ()+(ownerNow()?`<div class="glass"><button class=
 })();
 document.addEventListener("input",e=>{if(e.target.id==="q"&&$("#il"))$("#il").innerHTML=fnd(e.target.value)});
 document.addEventListener("click",async e=>{const x=e.target.closest("[data-a]");if(!x)return;const a=x.dataset.a,i=+x.dataset.i;
-if(a==="addi"){const n=g("i_n").trim();if(!n)return;IT.unshift({n,p:g("i_p"),t:g("i_t")});await save();render()}
-else if(a==="deli"){IT.splice(i,1);await save();$("#il").innerHTML=fnd(g("q"))}
+if(a==="addi"){const n=g("i_n").trim();if(!n)return;IT.unshift({id:"i"+(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2)),n,p:g("i_p"),t:g("i_t")});await save();render()}
+else if(a==="deli"){if(IT[i])await markDeleted("it",await itemKey(IT[i]));IT.splice(i,1);await save();$("#il").innerHTML=fnd(g("q"))}
 else if(a==="pubt")await pubt(i);else if(a==="shr")await shr(i);else if(a==="pubp")await pubp();else if(a==="getc")await getc();
 else if(a==="pv"){const p=PUB[i];await W(async()=>{try{preview({d:{n:p.d.n,t:p.d.t,b:await take(db.collection("pubfiles").doc(p.id),p.d.c)}})}catch(e){alert(e.message)}})}else if(a==="dlp"&&LP)download(LP);else if(a==="bk"&&vault)bk();else if(a==="lp"){$("#dlg").close();tab="profile";render()}else if(a==="lcx"){const p=PUB.find(q=>q.d.k==="cv");if(p)await W(async()=>{try{download({d:{n:p.d.n,t:p.d.t,b:await take(db.collection("pubfiles").doc(p.id),p.d.c)}})}catch(e){alert(e.message)}})}else if(a==="lk"){LK=i*6e4;try{localStorage.setItem("lk",LK)}catch(_){}touch();render()}});
 Object.assign(T.en,{c_cv:"CV"});Object.assign(T.bn,{c_cv:"সিভি"});Object.assign(T.en,{c_citizen:"Citizenship Certificate"});Object.assign(T.bn,{c_citizen:"নাগরিকত্ব সনদ"});
@@ -743,17 +746,17 @@ async function bk(){const a=document.createElement("a");a.href=URL.createObjectU
 const _s4=V.set;V.set=()=>_s4()+(vault?`${ownOK()?`<div class="glass"><h2>💾 ${B("ব্যাকআপ","Backup")}</h2><p>${B("এনক্রিপ্টেড ব্যাকআপ ফাইল (পাসওয়ার্ড ছাড়া খোলা যায় না)।","Encrypted backup file (useless without your password).")}</p><div class="acts"><button class="btn" data-a="bk">⬇ ${B("ব্যাকআপ","Backup")}</button><label class="btn g">⬆ ${B("রিস্টোর","Restore")}<input id="rs" type="file" accept=".json" hidden></label></div></div>`:""}<div class="glass"><h2>⏱ ${B("অটো-লক","Auto-lock")}</h2><div class="acts">${[1,2,5,15].map(m=>`<button class="btn s ${LK===m*6e4?"":"g"}" data-a="lk" data-i="${m}">${bn(m)} ${B("মিনিট","min")}</button>`).join("")}</div></div>`:"");
 document.addEventListener("input",e=>{if(e.target.id!=="ds")return;const v=e.target.value.toLowerCase();document.querySelectorAll(".file").forEach(r=>{const h=!r.textContent.toLowerCase().includes(v),n=r.nextElementSibling;r.style.display=h?"none":"";if(n&&n.classList.contains("xr"))n.style.display=h?"none":""})});
 document.addEventListener("change",async e=>{const x=e.target;if(x.id!=="rs"||!x.files[0])return;try{const v=JSON.parse(await x.files[0].text());if(!v.salt||!v.check)throw 0;if(!confirm(B("বর্তমান ভল্ট বদলে যাবে। চালিয়ে যাবেন?","This replaces the current vault. Continue?")))return;vault=v;await dbSet(v);key=null;files=[];IT=[];render()}catch(_){alert(B("ব্যাকআপ ফাইল ঠিক নয়","Invalid backup file"))}});
-let QS=[],CVK="";
+let QS=[],QRX=[],CVK="";
 const rnd=n=>[...crypto.getRandomValues(new Uint8Array(n))].map(x=>"abcdefghjkmnpqrstuvwxyz23456789"[x%31]).join("");
-const saveQS=async()=>{vault.qs=await seal(key,QS);await persist()};
+const saveQS=async()=>{vault.qs=await seal(key,QS);vault.qrx=await seal(key,[...new Set(QRX)]);await persist()};
 const cvbtn=()=>CVK?`<div class="glass"><button class="btn" data-a="lc">⬇ CV ${B("ডাউনলোড","download")}</button></div>`:"";
 async function cvKey(){const f=files.find(q=>q.d.k==="cv");if(!f)return"";if(!f.d.qk){const rk=crypto.getRandomValues(new Uint8Array(32)),ck=await crypto.subtle.importKey("raw",rk,"AES-GCM",false,["encrypt"]),iv=crypto.getRandomValues(new Uint8Array(12)),ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},ck,unb(f.d.b)),r=db.collection("cvs").doc("main"),n=await put(r,b64(ct));await r.set({n:f.d.n,t:f.d.t,iv:b64(iv),c:n});f.d.qk=b64(rk);f.s=await seal(key,f.d);await persist()}return f.d.qk}
 async function mkTok(K){const tk=rnd(10);await db.collection("tokens").doc(await sha(tk)).set({u:false,w:await seal(await shk(tk),{k:K})});return tk}
-async function showQR(){if(!key)return;await W(async()=>{try{if(navigator.onLine&&fbOn()){await login();const K=await cvKey(),live=[];for(const tk of QS){try{const d=await db.collection("tokens").doc(await sha(tk)).get();if(d.exists&&!d.data().u)live.push(tk)}catch(_){live.push(tk)}}QS=live;while(QS.length<3)QS.push(await mkTok(K));await saveQS()}if(!QS.length)return alert(B("অফলাইনে আছেন। অনলাইনে একবার QR খুলে রাখুন, তাহলে অফলাইনেও দেখানো যাবে","Offline: open the QR once while online to stock QR codes"));qrShow()}catch(e){alert(e.message)}})}
+async function showQR(){if(!key)return;await W(async()=>{try{if(navigator.onLine&&fbOn()){await login();for(const tk of QRX.slice()){try{await db.collection("tokens").doc(await sha(tk)).delete();QRX=QRX.filter(q=>q!==tk)}catch(_){}}const K=await cvKey(),live=[];for(const tk of QS){try{const d=await db.collection("tokens").doc(await sha(tk)).get();if(d.exists&&!d.data().u)live.push(tk)}catch(_){live.push(tk)}}QS=live;while(QS.length<3)QS.push(await mkTok(K));await saveQS()}if(!QS.length)return alert(B("অফলাইনে আছেন। অনলাইনে একবার QR খুলে রাখুন, তাহলে অফলাইনেও দেখানো যাবে","Offline: open the QR once while online to stock QR codes"));qrShow()}catch(e){alert(e.message)}})}
 function qrShow(){const q=qrcode(0,"M");q.addData(location.origin+location.pathname+"?v="+QS[0]+(window.QMODE==="c"?"&m=c":""));q.make();const d=$("#dlg");d.innerHTML=`<div class="acts" style="justify-content:space-between;margin-bottom:12px"><b><i class="ei">${S(QRI)}</i> ${B("QR কোড","QR code")}</b><button class="btn g s" data-a="close">${t("close")}</button></div>${window.qrChips(window.QMODE||"c")}<div class="qr">${q.createSvgTag(6,2)}</div><p style="text-align:center">${B("একবার স্ক্যান করলেই এই QR অকেজো। জমানো QR: ","Works once. Stocked QR: ")}${bn(QS.length)}</p><div class="acts" style="justify-content:center"><button class="btn g" data-a="nq">${B("পরের QR","Next QR")}</button></div>${window.cvVaultPanel()}`;d.showModal()}
 async function qrOpen(tk){try{if(!fbOn())return;const ref=db.collection("tokens").doc(await sha(tk));const w=await db.runTransaction(async t=>{const d=await t.get(ref);if(!d.exists||d.data().u)throw 0;t.update(ref,{u:true});return d.data().w});CVK=(await open(await shk(tk),w)).k;landing(true)}catch(_){landing(false)}}
 function landing(ok){const d=$("#dlg");d.innerHTML=ok?`<div style="text-align:center;padding:10px 0"><h1 class="grad">${t("name")}</h1><p>${t("role")}</p><div class="acts" style="justify-content:center;margin-top:16px">${new URLSearchParams(location.search).get("m")==="c"?"":`<button class="btn" data-a="lp">👤 ${B("প্রোফাইল দেখুন","View profile")}</button>`}${CVK?`<button class="btn g" data-a="lc">⬇ ${B("CV ডাউনলোড","Download CV")}</button>`:""}</div></div>`:`<p style="text-align:center;padding:14px">${B("এই QR আগেই ব্যবহার হয়ে গেছে বা মেয়াদ শেষ।","This QR was already used.")}</p><div class="acts" style="justify-content:center"><button class="btn g" data-a="close">${t("close")}</button></div>`;d.showModal()}
-document.addEventListener("click",async e=>{const x=e.target.closest('[data-a="lc"],[data-a="nq"]');if(!x)return;if(x.dataset.a==="nq"){QS.shift();await saveQS();QS.length?qrShow():$("#dlg").close();return}
+document.addEventListener("click",async e=>{const x=e.target.closest('[data-a="lc"],[data-a="nq"]');if(!x)return;if(x.dataset.a==="nq"){const old=QS.shift();if(old)QRX=[...new Set([...QRX,old])];await saveQS();if(old&&navigator.onLine&&fbOn()){try{await login();await db.collection("tokens").doc(await sha(old)).delete();QRX=QRX.filter(q=>q!==old);await saveQS()}catch(_){}}QS.length?qrShow():$("#dlg").close();return}
 await W(async()=>{try{const r=db.collection("cvs").doc("main"),D=(await r.get()).data(),k=await crypto.subtle.importKey("raw",unb(CVK),"AES-GCM",false,["decrypt"]),pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb(D.iv)},k,unb(await take(r,D.c)));download({d:{n:D.n,t:D.t,b:b64(pt)}})}catch(e){alert(e.message)}})});
 
 /* ===== Owner Google sign-in + encrypted vault cloud sync ===== */
@@ -825,14 +828,14 @@ seal=async function(k,o){
  return s};
 async function openFiles(k,list){const mig=[];
  const out=await Promise.all(list.map(async s=>{
-  if(s.m){try{const d=await open(k,s.m);Object.defineProperty(d,"$lz",{value:{k,s,p:null}});return{s,d}}catch(_){}}
-  const d=await open(k,s);mig.push({s,d});return{s,d}}));
+  if(s.m){try{const d=await open(k,s.m);if(!d.id)d.id="f_"+await sha(JSON.stringify([d.n||"",d.t||"",d.z||0,d.e||"",d.k||"",s.ct||""]));Object.defineProperty(d,"$lz",{value:{k,s,p:null}});return{s,d}}catch(_){}}
+  const d=await open(k,s);if(!d.id){d.id="f_"+await sha(JSON.stringify([d.n||"",d.t||"",d.z||0,d.e||"",d.k||"",d.b||""]));s=await seal(k,d)}mig.push({s,d});return{s,d}}));
  if(mig.length)setTimeout(async()=>{try{for(const x of mig)x.s.m=await _seal(k,meta(x.d));await dbSet(vault)}catch(_){}},50);
  return out}
 unlock=async function(pw){
  const k=await derive(pw,unb(vault.salt));await open(k,vault.check);
  const out=await openFiles(k,vault.files);
- key=k;files=out;IT=vault.it?await open(k,vault.it):[];QS=vault.qs?await open(k,vault.qs):[];FM=vault.fm?await open(k,vault.fm):[];UI=vault.uis?await open(k,vault.uis):{};CAL=vault.cal?await open(k,vault.cal):[];DBY=vault.dby?((await open(k,vault.dby)).y||""):"";
+ key=k;files=out;IT=vault.it?await open(k,vault.it):[];QS=vault.qs?await open(k,vault.qs):[];QRX=vault.qrx?await open(k,vault.qrx):[];FM=vault.fm?await open(k,vault.fm):[];UI=vault.uis?await open(k,vault.uis):{};CAL=vault.cal?await open(k,vault.cal):[];DBY=vault.dby?((await open(k,vault.dby)).y||""):"";
  setTimeout(bgThumbs,600)};
 
 /* wrappers: make sure the payload is loaded before it is used */
@@ -855,7 +858,7 @@ async function shrink(f){
 addFiles=async function(list){busy=true;render();
  for(const f of list){let blob=f,type=f.type||"application/octet-stream",name=f.name,th;
   if(type.startsWith("image/")&&type!=="image/gif"&&type!=="image/svg+xml"){try{const r=await shrink(f);blob=r.blob;th=r.th;if(r.conv){type="image/jpeg";name=name.replace(/\.[^.]+$/,"")+".jpg"}}catch(_){}}
-  const d={n:name,t:type,z:blob.size,b:b64(await blob.arrayBuffer()),k:cat};if(th)d.th=th;
+  const d={id:"f"+(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2)),n:name,t:type,z:blob.size,b:b64(await blob.arrayBuffer()),k:cat};if(th)d.th=th;
   files.push({d,s:await seal(key,d)})}
  await persist();busy=false;touch();render();setTimeout(bgThumbs,300)};
 
@@ -901,56 +904,78 @@ preview=async function(f){
 document.addEventListener("click",e=>{const x=e.target.closest('[data-a="vz"]');if(!x)return;ZI=Math.max(0,Math.min(ZL.length-1,ZI+(+x.dataset.z)));zapply()});
 document.addEventListener("dblclick",e=>{if(e.target.closest("#vb img, #vb .pg")){ZI=(ZI+1)%ZL.length;zapply()}});
 
-/* ---------- cloud sync: silent, automatic, no buttons ---------- */
+/* ---------- cloud sync: immutable generations + conflict-safe merge ---------- */
 let SB=0,SP=0;let SYE="",LV=null,LSY=0,PPT=0;
 const owner=()=>{try{return !!au&&isOwner(au.currentUser)}catch(_){return false}};
 const setSS=s=>{if(s==="ok"||s==="busy"||s==="err")CS=s==="ok"?"ok":CS==="ok"?"":CS};
-const put2=async(r,str)=>{const n=Math.ceil(str.length/CH);let i=0;const w=async()=>{while(i<n){const k=i++;await r.collection("c").doc(""+k).set({d:str.slice(k*CH,(k+1)*CH)})}};await Promise.all([w(),w(),w(),w()]);return n};
-cloudPush=async function(force){
- if(!vault||!owner())return;if(SB){SP=1;return}SB=1;
- try{const r=db.collection("vault").doc("main"),m=await r.get(),ct=m.exists?m.data().t:0;
-  if(m.exists&&ct>(vault.sy||0)&&!force){SB=0;return autoSync()}
-  const old=m.exists?m.data().c:0;let t=vault.ts=vault.ts||Date.now();if(t<=ct){t=vault.ts=ct+1}
-  const o={...vault};delete o.sy;const n=await put2(r,JSON.stringify(o));await r.set({c:n,t,...pfFields(m)},{merge:true});
-  for(let k=n;k<old;k++)await r.collection("c").doc(""+k).delete();
-  vault.sy=t;await dbSet(vault);CS="ok";SYE="";LSY=Date.now()}
- catch(e){CS="";SYE=(e&&(e.code||e.message))||"error"}
- finally{SB=0;if(SP){SP=0;setTimeout(()=>cloudPush().catch(()=>{}),400)}}};
-pullFrom=async function(r,m){
- const v=JSON.parse(await take(r,m.data().c));v.sy=v.ts=m.data().t;
- const same=!!(key&&vault&&vault.salt===v.salt),k0=key;vault=v;await dbSet(v);
- if(same){try{files=await openFiles(k0,v.files);IT=v.it?await open(k0,v.it):[];QS=v.qs?await open(k0,v.qs):[];FM=v.fm?await open(k0,v.fm):[]}catch(_){key=null;files=[];IT=[];QS=[];FM=[]}}
- else{key=null;files=[];IT=[];QS=[];FM=[]}
- CS="ok";if(!(editing||busy))render();if(key)setTimeout(bgThumbs,600)};
-/* both devices changed: merge automatically, never ask */
-async function mergeBoth(r,m){
- const cv=JSON.parse(await take(r,m.data().c)),ct=m.data().t;
- if(cv.salt!==vault.salt){
-  const lf=(vault.files||[]).length,cf=(cv.files||[]).length;
-  if(cf>lf||(cf===lf&&ct>=(vault.ts||0)))return pullFrom(r,m);
-  return cloudPush(true)}
- const newer=ct>(vault.ts||0)?cv:vault,older=newer===cv?vault:cv,seen=new Set((newer.files||[]).map(s=>s.ct)),files2=[...(newer.files||[])];
- for(const s of older.files||[])if(!seen.has(s.ct)){files2.push(s);seen.add(s.ct)}
- const mg={...newer,files:files2};mg.sy=ct;mg.ts=Math.max(vault.ts||0,ct)+1;
- const k0=key,same=!!k0;vault=mg;await dbSet(mg);
- if(same){try{files=await openFiles(k0,mg.files);IT=mg.it?await open(k0,mg.it):[];QS=mg.qs?await open(k0,mg.qs):[];FM=mg.fm?await open(k0,mg.fm):[]}catch(_){key=null;files=[];IT=[];QS=[];FM=[]}if(!(editing||busy))render();if(key)setTimeout(bgThumbs,600)}
- return cloudPush(true)}
-autoSync=async function(){
- if(!owner())return;if(SB)return;SB=1;let next=0;
- try{const r=db.collection("vault").doc("main"),m=await r.get();
-  const fresh=!vault||(!(vault.files||[]).length&&!vault.profile&&!vault.it);
-  if(!m.exists){if(vault)next=1;return}
-  const ct=m.data().t,sy=vault?(vault.sy||0):0,ts=vault?(vault.ts||0):0;
-  if(!vault||(fresh&&sy<ct)||(sy<ct&&ts<=sy)){SB=0;await pullFrom(r,m);return}
-  if(sy<ct){SB=0;await mergeBoth(r,m);return}
-  if(ts>sy)next=1;else{CS="ok";SYE="";LSY=Date.now()}}
- catch(e){CS="";SYE=(e&&(e.code||e.message))||"error"}
- finally{SB=0;if(next)cloudPush().catch(()=>{})}};
-const trySync=()=>{try{if(owner()&&navigator.onLine&&!editing&&!busy)autoSync().catch(()=>{})}catch(_){}};
+const put2=async(r,str,g)=>{const n=Math.ceil(str.length/CH);let i=0;const w=async()=>{while(i<n){const k=i++;await r.collection("c").doc(g+"_"+k).set({d:str.slice(k*CH,(k+1)*CH),g,at:Date.now()})}};await Promise.all([w(),w(),w(),w()]);return n};
+const take2=async(r,m)=>{const n=+m.c||0,g=m.g||"";if(!n)return "{}";const a=await Promise.all(Array.from({length:n},(_,k)=>r.collection("c").doc(g?g+"_"+k:String(k)).get()));if(a.some(x=>!x.exists||typeof x.data().d!=="string"))throw new Error("Cloud data chunk missing");return a.map(x=>x.data().d).join("")};
+const fileKey=async d=>d.id||("f_"+await sha(JSON.stringify([d.n||"",d.t||"",d.z||0,d.e||"",d.k||"",d.b||""])));
+const itemKey=async x=>x.id||("i_"+await sha(JSON.stringify(x)));
+const markDeleted=async(kind,id)=>{if(!vault||!id)return;vault._del=vault._del||{};const a=vault._del[kind]||(vault._del[kind]=[]);if(!a.includes(id))a.push(id);vault.ts=Date.now();await queueDBSet(vault)};
+const openArray=async(v,k,def=[])=>v&&v[k]?open(key,v[k]):def;
+const mergeObjects=(a,b)=>{const o={...(a||{})};for(const [k,v] of Object.entries(b||{})){if(v&&typeof v==="object"&&!Array.isArray(v)&&o[k]&&typeof o[k]==="object"&&!Array.isArray(o[k]))o[k]=mergeObjects(o[k],v);else o[k]=v}return o};
+const mergeProfile=(remote,local,rt,lt)=>{const preferLocal=(lt||0)>=(rt||0),out={};for(const k of new Set([...Object.keys(remote||{}),...Object.keys(local||{})])){const hasR=Object.prototype.hasOwnProperty.call(remote||{},k),hasL=Object.prototype.hasOwnProperty.call(local||{},k),a=remote&&remote[k],b=local&&local[k];if(!hasR){out[k]=b;continue}if(!hasL){out[k]=a;continue}if(a&&b&&typeof a==="object"&&typeof b==="object"&&!Array.isArray(a)&&!Array.isArray(b))out[k]=mergeProfile(a,b,rt,lt);else out[k]=preferLocal?b:a}return out};
+async function mergeVaultData(local,remote){
+ if(!key||local.salt!==remote.salt)throw new Error("Vault key mismatch; unlock with the same password on both devices");
+ const out={...remote,...local};
+ const del={};for(const k of ["files","it","cal","fm"]){del[k]=[...new Set([...(remote._del?.[k]||[]),...(local._del?.[k]||[])])]}out._del=del;
+ const dead=(k,id)=>del[k].includes(id);
+ // Files are individually encrypted; decrypt both snapshots, deduplicate by stable identity, then reseal.
+ const lf=await openFiles(key,local.files||[]),rf=await openFiles(key,remote.files||[]),fm=new Map();
+ for(const f of [...rf,...lf]){const id=await fileKey(f.d);if(!dead("files",id)){f.d.id=id;fm.set(id,f.d)}}
+ out.files=[];for(const d of fm.values())out.files.push(await seal(key,d));
+ // Finder records: merge additions from both devices; tombstones preserve deletions.
+ const li=await openArray(local,"it"),ri=await openArray(remote,"it"),im=new Map();
+ for(const x of [...ri,...li]){const id=await itemKey(x);if(!dead("it",id)){x.id=id;im.set(id,x)}}out.it=await seal(key,[...im.values()]);
+ // Calendar and family records already have stable IDs.
+ for(const [field,kind] of [["cal","cal"],["fm","fm"]]){const a=await openArray(remote,field),b=await openArray(local,field),m=new Map();for(const x of [...a,...b]){const id=String(x.id||"");if(id&&!dead(kind,id))m.set(id,x)}out[field]=await seal(key,[...m.values()])}
+ // QR token stock is a set; showQR validates each token against Firestore before reuse.
+ const lq=await openArray(local,"qs"),rq=await openArray(remote,"qs");out.qs=await seal(key,[...new Set([...rq,...lq])]);const lx=await openArray(local,"qrx"),rx=await openArray(remote,"qrx");out.qrx=await seal(key,[...new Set([...rx,...lx])]);
+ const lu=await openArray(local,"uis",{}),ru=await openArray(remote,"uis",{});out.uis=await seal(key,mergeObjects(ru,lu));
+ const ld=await openArray(local,"dby",{y:""}),rd=await openArray(remote,"dby",{y:""});out.dby=await seal(key,(local.ts||0)>=(remote.ts||0)?ld:rd);
+ // Merge different profile fields rather than replacing the entire profile snapshot.
+ out.profile=mergeProfile(remote.profile,local.profile,remote.pts||0,local.pts||0);out.pts=Math.max(local.pts||0,remote.pts||0);
+ out.ts=Math.max(local.ts||0,remote.ts||0)+1;out.sy=remote.sy||remote.ts||0;return out;
+}
+async function loadVaultState(v){
+ vault=v;await queueDBSet(v);
+ if(!key){files=[];IT=[];QS=[];QRX=[];FM=[];UI={};CAL=[];DBY="";return}
+ try{files=await openFiles(key,v.files||[]);IT=await openArray(v,"it");QS=await openArray(v,"qs");QRX=await openArray(v,"qrx");FM=await openArray(v,"fm");UI=await openArray(v,"uis",{});CAL=await openArray(v,"cal");DBY=(await openArray(v,"dby",{y:""})).y||""}
+ catch(e){key=null;files=[];IT=[];QS=[];QRX=[];FM=[];UI={};CAL=[];DBY="";throw e}
+}
+async function pullFrom(r,m){const v=JSON.parse(await take2(r,m.data()));v.sy=m.data().t||0;v.ts=v.sy;v.rev=m.data().rev||0;await loadVaultState(v);CS="ok";SYE="";LSY=Date.now();if(!(editing||busy))render();if(key)setTimeout(bgThumbs,600)};
+async function syncCycle(){
+ if(!owner()||!vault)return;if(SB){SP=1;return}SB=1;
+ try{
+  const r=db.collection("vault").doc("main");let done=false;
+  for(let attempt=0;attempt<5&&!done;attempt++){
+   const snap=await r.get(),meta=snap.exists?snap.data():{},remoteT=meta.t||0,localSy=vault.sy||0,localTs=vault.ts||0;
+   if(snap.exists&&remoteT>localSy){
+    const remote=JSON.parse(await take2(r,meta));remote.sy=remoteT;remote.ts=remoteT;remote.rev=meta.rev||0;
+    if(!key||remote.salt!==vault.salt){await pullFrom(r,snap);done=true;break}
+    if(localTs<=localSy){await pullFrom(r,snap);done=true;break}
+    vault=await mergeVaultData(vault,remote);await loadVaultState(vault);
+   } else if(!snap.exists){vault.sy=0}
+   if((vault.ts||0)<=(vault.sy||0)&&snap.exists){CS="ok";SYE="";LSY=Date.now();done=true;break}
+   const baseRev=meta.rev||0,baseT=meta.t||0,stamp=Math.max(Date.now(),baseT+1,(vault.ts||0)+1),gen="g"+stamp.toString(36)+Math.random().toString(36).slice(2,8),uploadTs=vault.ts||0;
+   const payload=JSON.parse(JSON.stringify(vault));delete payload.sy;delete payload.rev;const str=JSON.stringify(payload),count=await put2(r,str,gen);
+   try{
+    await db.runTransaction(async tx=>{const cur=await tx.get(r),d=cur.exists?cur.data():{};if((d.rev||0)!==baseRev||(d.t||0)!==baseT)throw new Error("sync-conflict");const extra=pfFields(cur);tx.set(r,{g:gen,c:count,t:stamp,rev:baseRev+1,...extra},{merge:true})});
+    vault.sy=stamp;vault.ts=(vault.ts||0)>uploadTs?Math.max(vault.ts,stamp+1):stamp;vault.rev=baseRev+1;await dbSet(vault);CS="ok";SYE="";LSY=Date.now();done=true;try{const old=await r.collection("c").where("at","<",Date.now()-7*864e5).limit(400).get();if(!old.empty){const batch=db.batch();old.docs.forEach(d=>batch.delete(d.ref));await batch.commit()}}catch(_){}
+   }catch(e){if(e.message!=="sync-conflict"&&e.code!=="aborted")throw e}
+  }
+  if(!done)throw new Error("Sync conflict: please retry while both devices are online");
+ }catch(e){CS="";SYE=(e&&(e.code||e.message))||"error"}
+ finally{SB=0;if(SP){SP=0;setTimeout(()=>syncCycle().catch(()=>{}),500)}}
+}
+cloudPush=async function(){return syncCycle()};
+async function mergeBoth(r,m){return syncCycle()}
+autoSync=async function(){return syncCycle()};
+const trySync=()=>{try{if(owner()&&navigator.onLine&&!editing&&!busy)syncCycle().catch(()=>{})}catch(_){}};
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")trySync()});
-addEventListener("online",trySync);
-addEventListener("focus",trySync);
-setInterval(()=>{if(document.visibilityState==="visible")trySync()},20000);
+addEventListener("online",trySync);addEventListener("focus",trySync);
+setInterval(()=>{if(document.visibilityState==="visible")trySync()},12000);
 
 /* ---------- fast profile sync + realtime + sync status ---------- */
 const pfFields=m=>{try{if(!vault||!vault.profile)return{};const rp=(m&&m.exists&&m.data().pft)||0;if((vault.pts||0)<rp)return{};const pf=JSON.stringify(vault.profile);if(pf.length>850000)return{};return{pf,pft:vault.pts||0}}catch(_){return{}}};
