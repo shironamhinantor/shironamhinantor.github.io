@@ -120,73 +120,6 @@ button,a,select,input,label{touch-action:manipulation}
 <nav class="tabs" id="tabs"></nav>
 <dialog id="dlg"></dialog>
 <script type="application/json" id="vault">{}
-/* ---------- biometric auto-prompt on the locked Documents screen + download guard ---------- */
-(function(){
- let tried=false;
- const _r=render;
- render=function(){
-  const out=_r.apply(this,arguments);
-  try{
-   const lockedDocs=tab==="docs"&&vault&&!key&&bioSup()&&bioOn();
-   if(lockedDocs){
-    if(!tried){tried=true;setTimeout(()=>{try{const d=document.getElementById("dlg");if(key||tab!=="docs"||(d&&d.open)||document.visibilityState!=="visible")return;const b=document.querySelector('[data-a="x_bio"]');if(b){window.__bioAuto=1;b.click()}}catch(_){}},400)}
-   }else tried=false;
-  }catch(_){}
-  return out};
- /* downloads only run after a genuine tap on a download button; taps on the preview itself do nothing */
- document.addEventListener("click",e=>{
-  const T=e.target;if(!T||!T.closest)return;
-  const dl=T.closest('[data-a="dlp"],[data-a="lc"],[data-a="lcx"],[data-d]');
-  if(dl&&dl.closest("button,a")&&e.isTrusted)window.__dlOK=Date.now();
-  else if(T.closest("#vb")&&!T.closest("button,a")){e.stopPropagation();e.preventDefault()}
- },true);
-})();
-
-/* ---------- extra tools: reminders, passwords/wallet, activity log, vCard, ID card, scan-to-PDF ---------- */
-(function(){
- let TL=null;
- const tlLoad=async()=>{if(!key)return{r:[],p:[],l:[]};if(TL)return TL;let o=null;try{if(vault&&vault.tl&&key)o=await open(key,vault.tl)}catch(_){}TL=Object.assign({r:[],p:[],l:[]},o||{});return TL};
- const tlSave=async()=>{vault.tl=await seal(key,TL);vault.ts=Date.now();await persist()};
- const _lk=lock;lock=function(){TL=null;return _lk.apply(this,arguments)};
- const _ul=unlock;unlock=async function(pw){try{const r=await _ul(pw);try{const T=await tlLoad();T.l.unshift({t:Date.now()});T.l=T.l.slice(0,40);await tlSave()}catch(_){}return r}catch(e){try{const a=JSON.parse(localStorage.getItem("flog")||"[]");a.unshift(Date.now());localStorage.setItem("flog",JSON.stringify(a.slice(0,30)))}catch(_){}throw e}};
- const day=86400000,td=()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth(),d.getDate())};
- const nxt=r=>{const d=new Date(r.d+"T00:00");if(isNaN(d))return null;if(r.k==="b"){let n=new Date(td().getFullYear(),d.getMonth(),d.getDate());if(n<td())n.setFullYear(n.getFullYear()+1);return n}return d};
- const left=r=>{const n=nxt(r);return n?Math.round((n-td())/day):9e9};
- const fd=n=>n.toLocaleDateString(L==="bn"?"bn-BD":"en-GB");
- const win=(ti,b)=>{const d=$("#dlg");d.className="";d.innerHTML=`<div class="acts" style="justify-content:space-between;margin-bottom:10px"><b>${ti}</b><button class="btn g s" data-a="close">${t("close")}</button></div>${b}`;if(!d.open)d.showModal()};
- const sel=(id,o)=>`<label class="fl"><select id="${id}">${o.map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}</select></label>`;
- async function vRem(){const T=await tlLoad(),a=T.r.map((r,i)=>({r,i,n:left(r)})).sort((x,y)=>x.n-y.n);
-  win("⏰ "+B("রিমাইন্ডার","Reminders"),`${a.map(({r,i,n})=>`<div class="file"><div class="n">${esc(r.n)}<small>${r.k==="b"?"🎂 ":"📅 "}${n<9e9?fd(nxt(r))+" · "+(n<0?B("মেয়াদ শেষ","Expired")+" "+(-n):n)+" "+B("দিন","d"):""}</small></div><div class="acts"><button class="btn r s" data-a="x_t_rd" data-i="${i}">✕</button></div></div>`).join("")||`<p>${B("কিছু নেই","Nothing yet")}</p>`}<h3>${B("নতুন","New")}</h3>${inp("rn",B("নাম (পাসপোর্ট মেয়াদ, জন্মদিন…)","Name (passport expiry, birthday…)"),"")}<label class="fl">${B("তারিখ","Date")}<input id="rd" type="date"></label>${sel("rk",[["e",B("মেয়াদ/ইভেন্ট","Expiry/Event")],["b",B("জন্মদিন (প্রতি বছর)","Birthday (yearly)")]])}<button class="btn" data-a="x_t_ra" style="width:100%">＋ ${B("যোগ করুন","Add")}</button>`)}
- async function vPw(){const T=await tlLoad();
-  win("🔑 "+B("পাসওয়ার্ড ও ওয়ালেট","Passwords & wallet"),`${T.p.map((p,i)=>`<div class="file"><div class="n">${esc(p.t)}<small>${esc(p.u||"")}${p.o?" · "+esc(p.o):""}</small></div><div class="acts"><button class="btn g s" data-a="x_t_pc" data-i="${i}">📋</button><button class="btn r s" data-a="x_t_pd" data-i="${i}">✕</button></div></div>`).join("")||`<p>${B("কিছু নেই","Nothing yet")}</p>`}<h3>${B("নতুন","New")}</h3>${inp("pt",B("শিরোনাম (Gmail, বিকাশ…)","Title (Gmail, bKash…)"),"")}${inp("pu",B("ইউজার/নম্বর","User / number"),"")}<label class="fl">${B("পাসওয়ার্ড/পিন","Password / PIN")}<input id="ps" type="password" autocomplete="off"></label>${inp("po",B("নোট","Note"),"")}<button class="btn" data-a="x_t_pa" style="width:100%">＋ ${B("সেভ","Save")}</button><p class="hnt">${B("এনক্রিপ্টেড ভল্টে থাকে। 📋 চাপলে পাসওয়ার্ড কপি হবে।","Stored in the encrypted vault. 📋 copies the secret.")}</p>`)}
- async function vLog(){const T=await tlLoad();let f=[];try{f=JSON.parse(localStorage.getItem("flog")||"[]")}catch(_){}
-  const a=[...T.l.map(x=>[x.t,1]),...f.map(x=>[x,0])].sort((x,y)=>y[0]-x[0]).slice(0,40);
-  win("🧾 "+B("অ্যাক্টিভিটি লগ","Activity log"),a.map(([x,o])=>`<div class="file"><div class="n">${o?"✅ "+B("আনলক সফল","Unlocked"):"❌ "+B("ভুল পাসওয়ার্ড","Wrong password")}<small>${new Date(x).toLocaleString(L==="bn"?"bn-BD":"en-GB")}</small></div></div>`).join("")||`<p>${B("কিছু নেই","Nothing yet")}</p>`+`<p class="hnt">${B("ভুল চেষ্টা শুধু এই ডিভাইসে সংরক্ষিত।","Failed attempts are stored on this device only.")}</p>`)}
- const vcf=()=>{const p=pr(),n=rv("name","name"),e=s=>String(s||"").replace(/[\\;,]/g,"\\$&").replace(/\n/g," ");const v=["BEGIN:VCARD","VERSION:3.0","FN:"+e(n),"N:;"+e(n)+";;;"];if(p.role)v.push("TITLE:"+e(p.role));if(p.phone)v.push("TEL;TYPE=CELL:"+p.phone);if(p.email)v.push("EMAIL:"+p.email);v.push("URL:"+location.origin+location.pathname,"END:VCARD");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([v.join("\r\n")],{type:"text/vcard"}));a.download=(n||"contact").replace(/\s+/g,"_")+".vcf";document.body.appendChild(a);a.click();a.remove()};
- const vId=()=>{const p=pr();let q="";try{const x=qrcode(0,"M");x.addData(location.origin+location.pathname);x.make();q=x.createSvgTag(4,1)}catch(_){}
-  win("🪪 ID",`<div class="idc"><div style="display:flex;gap:14px;align-items:center">${p.photo?`<img src="${p.photo}" alt="" style="width:84px;height:84px;border-radius:18px;object-fit:cover">`:""}<div><h2 style="margin:0">${esc(rv("name","name"))}</h2><p style="margin:4px 0">${esc(rv("role","role"))}</p><small>${esc(p.phone||"")}</small></div></div><div class="qr" style="max-width:180px;margin:14px auto 0">${q}</div></div><div class="acts" style="justify-content:center;margin-top:12px"><button class="btn" data-a="x_t_print">🖨 ${B("প্রিন্ট","Print")}</button></div>`)};
- const vScan=()=>win("📷 "+B("স্ক্যান থেকে PDF","Scan to PDF"),`<p>${B("এক বা একাধিক ছবি তুলুন/বেছে নিন — একটা PDF হয়ে ভল্টে যোগ হবে।","Take or pick one or more photos — they become one PDF added to the vault.")}</p><label class="btn" style="display:block;text-align:center">📷 ${B("ছবি নিন","Pick photos")}<input id="scn" type="file" accept="image/*" multiple hidden></label><p id="scs" class="hnt"></p>`);
- async function mkPdf(fs){const E=new TextEncoder(),parts=[],off=[];let len=0;const add=x=>{const u=typeof x==="string"?E.encode(x):x;parts.push(u);len+=u.length};const pg=[];
-  for(const f of fs){const b=await createImageBitmap(f),k=Math.min(1,1600/Math.max(b.width,b.height)),c=document.createElement("canvas");c.width=Math.round(b.width*k);c.height=Math.round(b.height*k);c.getContext("2d").drawImage(b,0,0,c.width,c.height);const bl=await new Promise(r=>c.toBlob(r,"image/jpeg",.82));pg.push({w:c.width,h:c.height,j:new Uint8Array(await bl.arrayBuffer())})}
-  const N=pg.length,ob=(n,x)=>{off[n]=len;add(n+" 0 obj\n"+x+"\nendobj\n")};add("%PDF-1.4\n");ob(1,"<</Type/Catalog/Pages 2 0 R>>");ob(2,"<</Type/Pages/Count "+N+"/Kids["+pg.map((_,i)=>(3+i*3)+" 0 R").join(" ")+"]>>");
-  pg.forEach((p,i)=>{const a=3+i*3,cs=`q ${p.w} 0 0 ${p.h} 0 0 cm /I Do Q`;ob(a,`<</Type/Page/Parent 2 0 R/MediaBox[0 0 ${p.w} ${p.h}]/Contents ${a+1} 0 R/Resources<</XObject<</I ${a+2} 0 R>>>>>>`);ob(a+1,`<</Length ${cs.length}>>\nstream\n${cs}\nendstream`);off[a+2]=len;add(`${a+2} 0 obj\n<</Type/XObject/Subtype/Image/Width ${p.w}/Height ${p.h}/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/DCTDecode/Length ${p.j.length}>>\nstream\n`);add(p.j);add("\nendstream\nendobj\n")});
-  const x=len,M=3+N*3;add(`xref\n0 ${M}\n0000000000 65535 f \n`+off.slice(1,M).map(o=>String(o).padStart(10,"0")+" 00000 n \n").join("")+`trailer\n<</Size ${M}/Root 1 0 R>>\nstartxref\n${x}\n%%EOF`);return new File(parts,"scan-"+new Date().toISOString().slice(0,10)+".pdf",{type:"application/pdf"})}
- document.addEventListener("change",async e=>{if(!e.target||e.target.id!=="scn"||!key)return;const fs=[...e.target.files],m=$("#scs");if(!fs.length)return;try{if(m)m.textContent="…";await addFiles([await mkPdf(fs)]);$("#dlg").close()}catch(x){if(m)m.textContent=String(x.message||x)}});
- V.home=(h=>()=>h()+(key?`<div class="glass"><h2>${B("আরও টুল","More tools")}${(()=>{try{const n=(TL?TL.r:[]).filter(r=>left(r)<=30).length;return n?` <span style="color:#ff6b6b">● ${n}</span>`:""}catch(_){return""}})()}</h2><div class="acts"><button class="btn g s" data-a="x_t_rem">⏰ ${B("রিমাইন্ডার","Reminders")}</button><button class="btn g s" data-a="x_t_pw">🔑 ${B("পাসওয়ার্ড","Passwords")}</button><button class="btn g s" data-a="x_t_scan">📷 ${B("স্ক্যান→PDF","Scan→PDF")}</button><button class="btn g s" data-a="x_t_id">🪪 ID</button><button class="btn g s" data-a="x_t_vcf">👤 vCard</button><button class="btn g s" data-a="x_t_log">🧾 ${B("লগ","Log")}</button></div></div>`:""))(V.home);
- V.contact=(h=>()=>{const x=h();return x?x+`<div class="glass"><button class="btn g" data-a="x_t_vcf" style="width:100%">👤 ${B("কন্টাক্টে সেভ (vCard)","Save contact (vCard)")}</button></div>`:x})(V.contact);
-
- window.qrV=()=>{const p=pr(),n=rv("name","name"),e=s=>String(s||"").replace(/[\\;,]/g,"\\$&").replace(/\n/g," "),v=["BEGIN:VCARD","VERSION:3.0","FN:"+e(n),"N:;"+e(n)+";;;"];if(p.role)v.push("TITLE:"+e(p.role));if(p.phone)v.push("TEL;TYPE=CELL:"+p.phone);if(p.email)v.push("EMAIL:"+p.email);v.push("URL:"+location.origin+location.pathname,"END:VCARD");let q="";try{const x=qrcode(0,"M");x.addData(v.join("\n"));x.make();q=x.createSvgTag(6,2)}catch(_){q=`<p>${B("QR লাইব্রেরি লোড হয়নি — একবার অনলাইনে অ্যাপ খুলুন","QR library not loaded — open the app once online")}</p>`}
-  win("<i class=\"ei\">"+S(QRI)+"</i> "+B("QR কোড","QR code"),`${window.qrChips("v")}<div class="qr">${q}</div><p style="text-align:center;font-size:13px">${B("স্ক্যান করলে ফোনে সরাসরি \"কন্টাক্ট যোগ করুন\" আসবে (যতবার খুশি স্ক্যান করা যাবে)","Scanning offers \"Add contact\" on the phone (can be scanned any number of times)")}</p>`)};
- document.addEventListener("click",async e=>{const x=e.target.closest&&e.target.closest('[data-a^="x_t_"]');if(!x)return;const a=x.dataset.a.slice(4),i=+x.dataset.i;
-  if(a==="vcf")return vcf();if(a==="print")return print();if(!key)return;const T=await tlLoad();
-  try{if(a==="rem")await vRem();else if(a==="pw")await vPw();else if(a==="log")await vLog();else if(a==="id")vId();else if(a==="scan")vScan();
-  else if(a==="ra"){const n=g("rn").trim(),d=g("rd");if(!n||!d)return;T.r.push({n,d,k:g("rk")});await tlSave();await vRem();render()}
-  else if(a==="rd"){T.r.splice(i,1);await tlSave();await vRem();render()}
-  else if(a==="pa"){const t0=g("pt").trim();if(!t0)return;T.p.push({t:t0,u:g("pu"),s:g("ps"),o:g("po")});await tlSave();await vPw()}
-  else if(a==="pd"){T.p.splice(i,1);await tlSave();await vPw()}
-  else if(a==="pc"){try{await navigator.clipboard.writeText(T.p[i].s||"");x.textContent="✓"}catch(_){}}}catch(er){alert(er.message||er)}});
- const st=document.createElement("style");st.textContent="@media print{body>*:not(#dlg){display:none!important}#dlg{position:static!important;box-shadow:none!important;background:#fff!important;color:#000!important}#dlg .acts{display:none!important}}";document.head.appendChild(st);
-})();
 </script>
 <script>
 function bootDone(){document.documentElement.classList.remove("boot")}setTimeout(bootDone,1800);
@@ -1137,4 +1070,118 @@ document.addEventListener("click",e=>{const x=e.target.closest('[data-a="cvok"],
  CR=null;$("#dlg").close();render()});
 document.addEventListener("click",e=>{const x=e.target.closest('[data-a="cvx"]');if(!x||!dr)return;collect();dr.cover="";render()});
 })();
-</script></body></html>
+</script><script>
+/* ---------- biometric auto-prompt on the locked Documents screen + download guard ---------- */
+(function(){
+ let tried=false;
+ const _r=render;
+ render=function(){
+  const out=_r.apply(this,arguments);
+  try{
+   const lockedDocs=tab==="docs"&&vault&&!key&&bioSup()&&bioOn();
+   if(lockedDocs){
+    if(!tried){tried=true;setTimeout(()=>{try{const d=document.getElementById("dlg");if(key||tab!=="docs"||(d&&d.open)||document.visibilityState!=="visible")return;const b=document.querySelector('[data-a="x_bio"]');if(b){window.__bioAuto=1;b.click()}}catch(_){}},400)}
+   }else tried=false;
+  }catch(_){}
+  return out};
+ /* downloads only run after a genuine tap on a download button; taps on the preview itself do nothing */
+ document.addEventListener("click",e=>{
+  const T=e.target;if(!T||!T.closest)return;
+  const dl=T.closest('[data-a="dlp"],[data-a="lc"],[data-a="lcx"],[data-d]');
+  if(dl&&dl.closest("button,a")&&e.isTrusted)window.__dlOK=Date.now();
+  else if(T.closest("#vb")&&!T.closest("button,a")){e.stopPropagation();e.preventDefault()}
+ },true);
+})();
+
+/* ---------- extra tools: reminders, passwords/wallet, activity log, vCard, ID card, scan-to-PDF ---------- */
+(function(){
+ let TL=null;
+ const tlLoad=async()=>{if(!key)return{r:[],p:[],l:[]};if(TL)return TL;let o=null;try{if(vault&&vault.tl&&key)o=await open(key,vault.tl)}catch(_){}TL=Object.assign({r:[],p:[],l:[]},o||{});return TL};
+ const tlSave=async()=>{vault.tl=await seal(key,TL);vault.ts=Date.now();await persist()};
+ const _lk=lock;lock=function(){TL=null;return _lk.apply(this,arguments)};
+ const _ul=unlock;unlock=async function(pw){try{const r=await _ul(pw);try{const T=await tlLoad();T.l.unshift({t:Date.now()});T.l=T.l.slice(0,40);await tlSave()}catch(_){}return r}catch(e){try{const a=JSON.parse(localStorage.getItem("flog")||"[]");a.unshift(Date.now());localStorage.setItem("flog",JSON.stringify(a.slice(0,30)))}catch(_){}throw e}};
+ const day=86400000,td=()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth(),d.getDate())};
+ const nxt=r=>{const d=new Date(r.d+"T00:00");if(isNaN(d))return null;if(r.k==="b"){let n=new Date(td().getFullYear(),d.getMonth(),d.getDate());if(n<td())n.setFullYear(n.getFullYear()+1);return n}return d};
+ const left=r=>{const n=nxt(r);return n?Math.round((n-td())/day):9e9};
+ const fd=n=>n.toLocaleDateString(L==="bn"?"bn-BD":"en-GB");
+ const win=(ti,b)=>{const d=$("#dlg");d.className="";d.innerHTML=`<div class="acts" style="justify-content:space-between;margin-bottom:10px"><b>${ti}</b><button class="btn g s" data-a="close">${t("close")}</button></div>${b}`;if(!d.open)d.showModal()};
+ const sel=(id,o)=>`<label class="fl"><select id="${id}">${o.map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}</select></label>`;
+ async function vRem(){const T=await tlLoad(),a=T.r.map((r,i)=>({r,i,n:left(r)})).sort((x,y)=>x.n-y.n);
+  win("⏰ "+B("রিমাইন্ডার","Reminders"),`${a.map(({r,i,n})=>`<div class="file"><div class="n">${esc(r.n)}<small>${r.k==="b"?"🎂 ":"📅 "}${n<9e9?fd(nxt(r))+" · "+(n<0?B("মেয়াদ শেষ","Expired")+" "+(-n):n)+" "+B("দিন","d"):""}</small></div><div class="acts"><button class="btn r s" data-a="x_t_rd" data-i="${i}">✕</button></div></div>`).join("")||`<p>${B("কিছু নেই","Nothing yet")}</p>`}<h3>${B("নতুন","New")}</h3>${inp("rn",B("নাম (পাসপোর্ট মেয়াদ, জন্মদিন…)","Name (passport expiry, birthday…)"),"")}<label class="fl">${B("তারিখ","Date")}<input id="rd" type="date"></label>${sel("rk",[["e",B("মেয়াদ/ইভেন্ট","Expiry/Event")],["b",B("জন্মদিন (প্রতি বছর)","Birthday (yearly)")]])}<button class="btn" data-a="x_t_ra" style="width:100%">＋ ${B("যোগ করুন","Add")}</button>`)}
+ async function vPw(){const T=await tlLoad();
+  win("🔑 "+B("পাসওয়ার্ড ও ওয়ালেট","Passwords & wallet"),`${T.p.map((p,i)=>`<div class="file"><div class="n">${esc(p.t)}<small>${esc(p.u||"")}${p.o?" · "+esc(p.o):""}</small></div><div class="acts"><button class="btn g s" data-a="x_t_pc" data-i="${i}">📋</button><button class="btn r s" data-a="x_t_pd" data-i="${i}">✕</button></div></div>`).join("")||`<p>${B("কিছু নেই","Nothing yet")}</p>`}<h3>${B("নতুন","New")}</h3>${inp("pt",B("শিরোনাম (Gmail, বিকাশ…)","Title (Gmail, bKash…)"),"")}${inp("pu",B("ইউজার/নম্বর","User / number"),"")}<label class="fl">${B("পাসওয়ার্ড/পিন","Password / PIN")}<input id="ps" type="password" autocomplete="off"></label>${inp("po",B("নোট","Note"),"")}<button class="btn" data-a="x_t_pa" style="width:100%">＋ ${B("সেভ","Save")}</button><p class="hnt">${B("এনক্রিপ্টেড ভল্টে থাকে। 📋 চাপলে পাসওয়ার্ড কপি হবে।","Stored in the encrypted vault. 📋 copies the secret.")}</p>`)}
+ async function vLog(){const T=await tlLoad();let f=[];try{f=JSON.parse(localStorage.getItem("flog")||"[]")}catch(_){}
+  const a=[...T.l.map(x=>[x.t,1]),...f.map(x=>[x,0])].sort((x,y)=>y[0]-x[0]).slice(0,40);
+  win("🧾 "+B("অ্যাক্টিভিটি লগ","Activity log"),a.map(([x,o])=>`<div class="file"><div class="n">${o?"✅ "+B("আনলক সফল","Unlocked"):"❌ "+B("ভুল পাসওয়ার্ড","Wrong password")}<small>${new Date(x).toLocaleString(L==="bn"?"bn-BD":"en-GB")}</small></div></div>`).join("")||`<p>${B("কিছু নেই","Nothing yet")}</p>`+`<p class="hnt">${B("ভুল চেষ্টা শুধু এই ডিভাইসে সংরক্ষিত।","Failed attempts are stored on this device only.")}</p>`)}
+ const vcf=()=>{const p=pr(),n=rv("name","name"),e=s=>String(s||"").replace(/[\\;,]/g,"\\$&").replace(/\n/g," ");const v=["BEGIN:VCARD","VERSION:3.0","FN:"+e(n),"N:;"+e(n)+";;;"];if(p.role)v.push("TITLE:"+e(p.role));if(p.phone)v.push("TEL;TYPE=CELL:"+p.phone);if(p.email)v.push("EMAIL:"+p.email);v.push("URL:"+location.origin+location.pathname,"END:VCARD");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([v.join("\r\n")],{type:"text/vcard;charset=utf-8"}));a.download=(n||"contact").replace(/\s+/g,"_")+".vcf";document.body.appendChild(a);a.click();a.remove()};
+ const vId=()=>{const p=pr();let q="";try{const x=qrcode(0,"M");x.addData(location.origin+location.pathname);x.make();q=x.createSvgTag(4,1)}catch(_){}
+  win("🪪 ID",`<div class="idc"><div style="display:flex;gap:14px;align-items:center">${p.photo?`<img src="${p.photo}" alt="" style="width:84px;height:84px;border-radius:18px;object-fit:cover">`:""}<div><h2 style="margin:0">${esc(rv("name","name"))}</h2><p style="margin:4px 0">${esc(rv("role","role"))}</p><small>${esc(p.phone||"")}</small></div></div><div class="qr" style="max-width:180px;margin:14px auto 0">${q}</div></div><div class="acts" style="justify-content:center;margin-top:12px"><button class="btn" data-a="x_t_print">🖨 ${B("প্রিন্ট","Print")}</button></div>`)};
+ const vScan=()=>win("📷 "+B("স্ক্যান থেকে PDF","Scan to PDF"),`<p>${B("এক বা একাধিক ছবি তুলুন/বেছে নিন — একটা PDF হয়ে ভল্টে যোগ হবে।","Take or pick one or more photos — they become one PDF added to the vault.")}</p><label class="btn" style="display:block;text-align:center">📷 ${B("ছবি নিন","Pick photos")}<input id="scn" type="file" accept="image/*" multiple hidden></label><p id="scs" class="hnt"></p>`);
+ async function mkPdf(fs){const E=new TextEncoder(),parts=[],off=[];let len=0;const add=x=>{const u=typeof x==="string"?E.encode(x):x;parts.push(u);len+=u.length};const pg=[];
+  for(const f of fs){const b=await createImageBitmap(f),k=Math.min(1,1600/Math.max(b.width,b.height)),c=document.createElement("canvas");c.width=Math.round(b.width*k);c.height=Math.round(b.height*k);c.getContext("2d").drawImage(b,0,0,c.width,c.height);const bl=await new Promise(r=>c.toBlob(r,"image/jpeg",.82));pg.push({w:c.width,h:c.height,j:new Uint8Array(await bl.arrayBuffer())})}
+  const N=pg.length,ob=(n,x)=>{off[n]=len;add(n+" 0 obj\n"+x+"\nendobj\n")};add("%PDF-1.4\n");ob(1,"<</Type/Catalog/Pages 2 0 R>>");ob(2,"<</Type/Pages/Count "+N+"/Kids["+pg.map((_,i)=>(3+i*3)+" 0 R").join(" ")+"]>>");
+  pg.forEach((p,i)=>{const a=3+i*3,cs=`q ${p.w} 0 0 ${p.h} 0 0 cm /I Do Q`;ob(a,`<</Type/Page/Parent 2 0 R/MediaBox[0 0 ${p.w} ${p.h}]/Contents ${a+1} 0 R/Resources<</XObject<</I ${a+2} 0 R>>>>>>`);ob(a+1,`<</Length ${cs.length}>>\nstream\n${cs}\nendstream`);off[a+2]=len;add(`${a+2} 0 obj\n<</Type/XObject/Subtype/Image/Width ${p.w}/Height ${p.h}/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/DCTDecode/Length ${p.j.length}>>\nstream\n`);add(p.j);add("\nendstream\nendobj\n")});
+  const x=len,M=3+N*3;add(`xref\n0 ${M}\n0000000000 65535 f \n`+off.slice(1,M).map(o=>String(o).padStart(10,"0")+" 00000 n \n").join("")+`trailer\n<</Size ${M}/Root 1 0 R>>\nstartxref\n${x}\n%%EOF`);return new File(parts,"scan-"+new Date().toISOString().slice(0,10)+".pdf",{type:"application/pdf"})}
+ document.addEventListener("change",async e=>{if(!e.target||e.target.id!=="scn"||!key)return;const fs=[...e.target.files],m=$("#scs");if(!fs.length)return;try{if(m)m.textContent="…";await addFiles([await mkPdf(fs)]);$("#dlg").close()}catch(x){if(m)m.textContent=String(x.message||x)}});
+ V.home=(h=>()=>h()+(key?`<div class="glass"><h2>${B("আরও টুল","More tools")}${(()=>{try{const n=(TL?TL.r:[]).filter(r=>left(r)<=30).length;return n?` <span style="color:#ff6b6b">● ${n}</span>`:""}catch(_){return""}})()}</h2><div class="acts"><button class="btn g s" data-a="x_t_rem">⏰ ${B("রিমাইন্ডার","Reminders")}</button><button class="btn g s" data-a="x_t_pw">🔑 ${B("পাসওয়ার্ড","Passwords")}</button><button class="btn g s" data-a="x_t_scan">📷 ${B("স্ক্যান→PDF","Scan→PDF")}</button><button class="btn g s" data-a="x_t_id">🪪 ID</button><button class="btn g s" data-a="x_t_vcf">👤 vCard</button><button class="btn g s" data-a="x_t_cv"><i class="ei"><svg viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5M9 13h7M9 17h7"/></svg></i> ${B("সিভি মেকার","CV maker")}</button><button class="btn g s" data-a="x_t_log">🧾 ${B("লগ","Log")}</button></div></div>`:""))(V.home);
+ V.contact=(h=>()=>{const x=h();return x?x+`<div class="glass"><button class="btn g" data-a="x_t_vcf" style="width:100%">👤 ${B("কন্টাক্টে সেভ (vCard)","Save contact (vCard)")}</button></div>`:x})(V.contact);
+
+ window.qrV=()=>{const p=pr(),n=rv("name","name"),e=s=>String(s||"").replace(/[\\;,]/g,"\\$&").replace(/\n/g," "),v=["BEGIN:VCARD","VERSION:3.0","FN:"+e(n),"N:;"+e(n)+";;;"];if(p.role)v.push("TITLE:"+e(p.role));if(p.phone)v.push("TEL;TYPE=CELL:"+p.phone);if(p.email)v.push("EMAIL:"+p.email);v.push("URL:"+location.origin+location.pathname,"END:VCARD");let q="";try{const x=qrcode(0,"M");x.addData(v.join("\n"));x.make();q=x.createSvgTag(6,2)}catch(_){q=`<p>${B("QR লাইব্রেরি লোড হয়নি — একবার অনলাইনে অ্যাপ খুলুন","QR library not loaded — open the app once online")}</p>`}
+  win("<i class=\"ei\">"+S(QRI)+"</i> "+B("QR কোড","QR code"),`${window.qrChips("v")}<div class="qr">${q}</div><p style="text-align:center;font-size:13px">${B("স্ক্যান করলে ফোনে সরাসরি \"কন্টাক্ট যোগ করুন\" আসবে (যতবার খুশি স্ক্যান করা যাবে)","Scanning offers \"Add contact\" on the phone (can be scanned any number of times)")}</p>`)};
+  /* ---------- CV maker: form -> A4 canvas -> PDF ---------- */
+ const CVD=()=>{const p=pr();return{name:rv("name","name"),addr:"",cell:p.phone||"",email:p.email||"",photo:"",obj:"To secure a responsible and growth-oriented position in a progressive organization where I can utilize my skills, contribute to organizational success, and continuously enhance my personal and professional development through new challenges and learning opportunities.",pi:"Permanent Address: \nDate of Birth: \nNid: \nNationality: Bangladeshi\nBlood Group: \nReligion: \nMarital Status: ",lang:"",intr:"",ref:"",edu:"",tr:"",sk:"",decl:"I hereby declare that the details mentioned above are true to the best of my knowledge. If appointed, I assure you that I will contribute my best to the welfare of the organization.",bye:"Thanks & Best Regards,"}};
+ const CVF=[["name","cm_n"],["addr","cm_a"],["cell","cm_c"],["email","cm_e"],["obj","cm_o"],["pi","cm_p"],["lang","cm_l"],["intr","cm_i"],["ref","cm_r"],["edu","cm_d"],["tr","cm_t"],["sk","cm_s"],["decl","cm_m"],["bye","cm_b"]];
+ const cvGrab=o=>{CVF.forEach(([k,i])=>{if(document.getElementById(i))o[k]=g(i)});return o};
+ const ta=(id,l,v,r)=>`<label class="fl">${l}<textarea id="${id}" rows="${r||3}">${esc(v||"")}</textarea></label>`;
+ const vCv=async T=>{const d=Object.assign(CVD(),T.cv||{}),ph=d.photo||pr().photo||"";
+  win(B("সিভি মেকার","CV maker"),`<div class="acts" style="gap:12px;align-items:center">${ph?`<img src="${ph}" alt="" style="width:64px;height:70px;object-fit:cover;border-radius:10px">`:""}<label class="btn g s">${B("ছবি বদলান","Change photo")}<input id="cm_ph" type="file" accept="image/*" hidden></label></div>${inp("cm_n",B("নাম","Name"),d.name)}${inp("cm_a",B("ঠিকানা (উপরে)","Address (top line)"),d.addr)}${inp("cm_c",B("মোবাইল","Cell"),d.cell)}${inp("cm_e",B("ইমেইল","Email"),d.email)}${ta("cm_o","Career Objective",d.obj,4)}${ta("cm_p","Personal Information — "+B("প্রতি লাইনে  নাম: মান","one per line  Label: value"),d.pi,7)}${ta("cm_l","Languages — "+B("প্রতি লাইনে একটা","one per line"),d.lang,2)}${ta("cm_i","Interests",d.intr,2)}${ta("cm_r","Referees",d.ref,2)}${ta("cm_d","Education — "+B("আইটেমের মাঝে ফাঁকা লাইন, প্রথম লাইন বোল্ড, **বোল্ড**","blank line between items, first line bold, **bold**"),d.edu,7)}${ta("cm_t","Trainings",d.tr,4)}${ta("cm_s","Skills & Abilities — "+B("প্রতি লাইনে একটা","one per line"),d.sk,4)}${ta("cm_m","Declaration",d.decl,3)}${inp("cm_b",B("শেষের লাইন","Closing line"),d.bye)}<button class="btn" data-a="x_t_cvs" style="width:100%;margin-top:10px">${B("সেভ ও PDF ডাউনলোড","Save & download PDF")}</button><p class="hnt">${B("তথ্য এনক্রিপ্টেড ভল্টে সেভ থাকে।","Saved in the encrypted vault.")}</p>`)};
+ const pdfOf=(j,w,h)=>{const E=new TextEncoder(),P=[],o=[];let n=0;const a=u=>{u=typeof u==="string"?E.encode(u):u;P.push(u);n+=u.length},ob=(i,s)=>{o[i]=n;a(i+" 0 obj\n"+s+"\nendobj\n")};
+  a("%PDF-1.4\n");ob(1,"<</Type/Catalog/Pages 2 0 R>>");ob(2,"<</Type/Pages/Count 1/Kids[3 0 R]>>");ob(3,"<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Contents 4 0 R/Resources<</XObject<</I 5 0 R>>>>>>");
+  const cs="q 612 0 0 792 0 0 cm /I Do Q";ob(4,`<</Length ${cs.length}>>\nstream\n${cs}\nendstream`);
+  o[5]=n;a(`5 0 obj\n<</Type/XObject/Subtype/Image/Width ${w}/Height ${h}/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/DCTDecode/Length ${j.length}>>\nstream\n`);a(j);a("\nendstream\nendobj\n");
+  const xr=n;a("xref\n0 6\n0000000000 65535 f \n"+[1,2,3,4,5].map(i=>String(o[i]).padStart(10,"0")+" 00000 n \n").join("")+`trailer\n<</Size 6/Root 1 0 R>>\nstartxref\n${xr}\n%%EOF`);return new Blob(P,{type:"application/pdf"})};
+ const FF='"Noto Serif","Times New Roman",Georgia,serif',fnt=(b,s)=>(b?"bold ":"")+s+"px "+FF;
+ const cvPdf=async o=>{let im=null;const src=o.photo||pr().photo;if(src)try{im=await new Promise((r,j)=>{const i=new Image();i.onload=()=>r(i);i.onerror=j;i.src=src})}catch(_){}
+  const W=816,H=1056,c=document.createElement("canvas");c.width=W*2;c.height=H*2;const x=c.getContext("2d");x.textBaseline="top";
+  const ln=(s,w,z,bb)=>{const t=[];let bo=!!bb;String(s||"").split("**").forEach((q,i)=>{if(i)bo=!bo;q.split(/\s+/).forEach(m=>{if(m)t.push([m,bo])})});const R=[];let cu=[],cw=0;for(const[m,b2]of t){x.font=fnt(b2,z);const mw=x.measureText(m).width,sp=x.measureText(" ").width;if(cu.length&&cw+sp+mw>w){R.push(cu);cu=[];cw=0}cw+=(cu.length?sp:0)+mw;cu.push([m,b2,mw])}if(cu.length)R.push(cu);return R};
+  const tx=(L,px,y,w,z,lh,j)=>{L.forEach((r,i)=>{x.font=fnt(0,z);const tw=r.reduce((a,t)=>a+t[2],0),n=r.length-1,sp=j&&i<L.length-1&&n>0?(w-tw)/n:x.measureText(" ").width;let cx=px;r.forEach(([m,b,mw])=>{x.font=fnt(b,z);x.fillText(m,cx,y);cx+=mw+sp});y+=lh});return y};
+  const rows=s=>String(s||"").split("\n").map(q=>q.trim()).filter(Boolean),blocks=s=>String(s||"").split(/\n\s*\n/).map(q=>q.trim()).filter(Boolean);
+  const paint=f=>{x.setTransform(2,0,0,2,0,0);x.fillStyle="#fff";x.fillRect(0,0,W,H);
+   const z=13*f,lh=z*1.55,hd=(t,px,y,w,col)=>{x.fillStyle=col||"#0070c0";x.font=fnt(1,17*f);x.fillText(t,px,y);y+=25*f;x.fillStyle="#000";x.fillRect(px,y,w,2);return y+9*f};
+   const sq=(px,y)=>{x.fillStyle="#000";x.fillRect(px+3,y+z*.5,5*f,5*f)},dt=(px,y)=>{x.fillStyle="#000";x.beginPath();x.arc(px+3,y+z*.7,1.8,0,7);x.fill()};
+   const item=(s,px,y,w,mk,bf,off)=>{off=off||20;mk(px,y);x.fillStyle="#000";String(s).split("\n").forEach((q,i)=>{y=tx(ln(q,w-off,z,bf&&i==0&&!q.includes("**")),px+off,y,w-off,z,lh)});return y+3*f};
+   x.fillStyle="#1f4e79";let y=tx(ln(o.name,520,16,1),33,34,520,16,26);x.fillStyle="#000";
+   const h2=(o.addr||"")+(o.cell?(o.addr?" | ":"")+"**Cell:** "+o.cell:"");
+   y=tx(ln(h2,520,14,0),35,y+4,520,14,22);if(o.email)y=tx(ln("**Email:** "+o.email,520,14,0),35,y+4,520,14,22);
+   if(im){const bw=180,bh=197,k=Math.max(bw/im.width,bh/im.height),sw=bw/k,sh=bh/k;x.drawImage(im,(im.width-sw)/2,(im.height-sh)/2,sw,sh,607,16,bw,bh)}
+   y=Math.max(y+14,im?222:110);
+   if(o.obj&&o.obj.trim()){x.fillStyle="#0070c0";x.font=fnt(1,17);x.fillText("CAREER OBJECTIVE",33,y);y+=25;x.fillStyle="#555";x.fillRect(33,y,750,2);y+=9;x.fillStyle="#000";y=tx(ln(o.obj,750,z,0),33,y,750,z,lh,1)}
+   const ct=y+18;x.fillStyle="#f1f1f1";x.fillRect(29,ct-6,222,1030-ct+6);
+   let ly=ct+4;const pi=rows(o.pi).map(q=>{const m=q.match(/^([^:]+):\s*(.*)$/);return m?(m[2]?"**"+m[1]+":** "+m[2]:""):q}).filter(Boolean);
+   if(pi.length){ly=hd("Personal Information",39,ly,202);pi.forEach(q=>ly=item(q,39,ly,202,dt,0,12)+3*f)}
+   [["Languages",o.lang],["Interests",o.intr],["Referees",o.ref]].forEach(([t,s])=>{const r=rows(s);if(r.length){ly+=10*f;ly=hd(t,39,ly,202,"#2E74B5");r.forEach(q=>ly=item(q,39,ly,202,dt,0,12))}});
+   let ry=ct+4;const RX=267,RW=512;
+   [["Education",blocks(o.edu),1],["Trainings",blocks(o.tr),0],["Skills & Abilities",rows(o.sk),0]].forEach(([t,a,bf])=>{if(a.length){ry=hd(t,RX,ry,RW,t==="Skills & Abilities"?"#2E74B5":0);a.forEach(q=>ry=item(q,RX,ry,RW,sq,bf)+(t==="Skills & Abilities"?0:6*f));ry+=8*f}});
+   if(o.decl&&o.decl.trim()){ry=hd("Declaration",RX,ry,RW);x.fillStyle="#000";ry=tx(ln(o.decl,RW,z,0),RX,ry,RW,z,lh,1)+14*f}
+   x.fillStyle="#000";if(o.bye){x.font=fnt(1,15*f);x.fillText(o.bye,779-x.measureText(o.bye).width,ry+8*f);ry+=32*f}
+   if(o.name){x.font=fnt(0,12*f);x.fillText(o.name,779-x.measureText(o.name).width,ry);ry+=20*f}
+   return Math.max(ly,ry)};
+  let f=1,r;while((r=paint(f))>1030&&f>.71)f-=.05;
+  if(r>1040)alert(B("লেখা বেশি, এক পেজে ধরেনি — কিছু কমান","Too much text for one page — shorten it"));
+  const bl=await new Promise(r=>c.toBlob(r,"image/jpeg",.92));return pdfOf(new Uint8Array(await bl.arrayBuffer()),c.width,c.height)};
+ const cvSave=async T=>{const o=cvGrab(Object.assign(CVD(),T.cv||{}));T.cv=o;await tlSave();
+  const bl=await cvPdf(o),a=document.createElement("a");a.href=URL.createObjectURL(bl);a.download=(o.name||"CV").trim().replace(/\s+/g,"_")+"_CV.pdf";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),6e4)};
+ document.addEventListener("change",async e=>{if(!e.target||e.target.id!=="cm_ph"||!key)return;const fl=e.target.files[0];if(!fl)return;try{const T=await tlLoad(),b=await createImageBitmap(fl),k=Math.min(1,500/Math.max(b.width,b.height)),c=document.createElement("canvas");c.width=Math.round(b.width*k);c.height=Math.round(b.height*k);c.getContext("2d").drawImage(b,0,0,c.width,c.height);T.cv=cvGrab(Object.assign(CVD(),T.cv||{},{photo:c.toDataURL("image/jpeg",.85)}));await tlSave();await vCv(T)}catch(er){alert(er.message||er)}});
+ {const s2=document.createElement("style");s2.textContent="#dlg textarea{width:100%;box-sizing:border-box;font:inherit;padding:10px;border-radius:12px;border:1px solid rgba(128,128,128,.35);background:transparent;color:inherit;resize:vertical}";document.head.appendChild(s2)}
+document.addEventListener("click",async e=>{const x=e.target.closest&&e.target.closest('[data-a^="x_t_"]');if(!x)return;const a=x.dataset.a.slice(4),i=+x.dataset.i;
+  if(a==="vcf")return vcf();if(a==="print")return print();if(!key)return;const T=await tlLoad();
+  try{if(a==="rem")await vRem();else if(a==="pw")await vPw();else if(a==="log")await vLog();else if(a==="cv")await vCv(T);else if(a==="cvs")await cvSave(T);else if(a==="id")vId();else if(a==="scan")vScan();
+  else if(a==="ra"){const n=g("rn").trim(),d=g("rd");if(!n||!d)return;T.r.push({n,d,k:g("rk")});await tlSave();await vRem();render()}
+  else if(a==="rd"){T.r.splice(i,1);await tlSave();await vRem();render()}
+  else if(a==="pa"){const t0=g("pt").trim();if(!t0)return;T.p.push({t:t0,u:g("pu"),s:g("ps"),o:g("po")});await tlSave();await vPw()}
+  else if(a==="pd"){T.p.splice(i,1);await tlSave();await vPw()}
+  else if(a==="pc"){try{await navigator.clipboard.writeText(T.p[i].s||"");x.textContent="✓"}catch(_){}}}catch(er){alert(er.message||er)}});
+ const st=document.createElement("style");st.textContent="@media print{body>*:not(#dlg){display:none!important}#dlg{position:static!important;box-shadow:none!important;background:#fff!important;color:#000!important}#dlg .acts{display:none!important}}";document.head.appendChild(st);
+})();
+</script>
+</body></html>
