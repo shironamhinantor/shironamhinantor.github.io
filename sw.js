@@ -1,4 +1,4 @@
-const C="antor-v18";
+const C="antor-v19";
 self.addEventListener("install",e=>e.waitUntil(
  caches.open(C).then(c=>Promise.all(["./","index.html"].map(u=>fetch(u,{cache:"reload"}).then(r=>r.ok&&c.put(u,r)).catch(()=>{})))).then(()=>self.skipWaiting())
 ));
@@ -17,6 +17,6 @@ self.addEventListener("fetch",e=>{
  e.respondWith(new Promise(res=>{
   let done=false;const fb=()=>caches.open(C).then(k=>k.match(r,{ignoreSearch:true})).then(m=>m||caches.match(r,{ignoreSearch:true}));
   const t=setTimeout(()=>fb().then(m=>{if(m&&!done){done=true;res(m)}}),3000);
-  fetch(r,{cache:"no-cache"}).then(x=>{clearTimeout(t);if(x&&x.ok)caches.open(C).then(k=>k.put(r,x.clone()));if(!done){done=true;res(x)}}).catch(()=>{clearTimeout(t);fb().then(m=>{if(!done){done=true;res(m||Response.error())}})})
+  fetch(r,{cache:"no-cache"}).then(x=>{clearTimeout(t);/* clone BEFORE the page starts reading the body, otherwise the cache copy silently fails */if(x&&x.ok){const cl=x.clone();caches.open(C).then(k=>k.put(r,cl)).catch(()=>{})}if(!done){done=true;res(x)}}).catch(()=>{clearTimeout(t);fb().then(m=>{if(!done){done=true;res(m||Response.error())}})})
  }));
 });

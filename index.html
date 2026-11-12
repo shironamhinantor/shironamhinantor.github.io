@@ -99,6 +99,7 @@ main::before{content:"";position:fixed;width:280px;height:280px;border-radius:50
 .file{transition:background .2s}
 #app{transition:opacity .25s}.boot #app,.boot .tabs{opacity:0}.tabs{transition:opacity .25s}
 button,a,select,input,label{touch-action:manipulation}
+.fl input,.fl textarea,.fl select,.xr input,#dlg input,#dlg select{font-size:16px}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style><style id="fmcss">
 .fmg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
@@ -163,7 +164,7 @@ const persist=()=>{if(!vault)return Promise.resolve();vault.files=files.map(f=>f
 let UI={};
 async function create(pw){const salt=crypto.getRandomValues(new Uint8Array(16));key=await derive(pw,salt);vault={salt:b64(salt),check:await seal(key,{ok:1}),files:[]};files=[];await persist()}
 async function unlock(pw){const k=await derive(pw,unb(vault.salt));await open(k,vault.check);const out=[];for(const s of vault.files)out.push({s,d:await open(k,s)});key=k;files=out;IT=vault.it?await open(k,vault.it):[];QS=vault.qs?await open(k,vault.qs):[];FM=vault.fm?await open(k,vault.fm):[];UI=vault.uis?await open(k,vault.uis):{};CAL=vault.cal?await open(k,vault.cal):[];DBY=vault.dby?((await open(k,vault.dby)).y||""):""}
-function lock(){clearTimeout(timer);key=null;files=[];IT=[];QS=[];QRX=[];FM=[];CAL=[];DBY="";editing=false;dr=null;pend=null;CVK="";try{const d=$("#dlg");if(d&&d.open)d.close()}catch(_){}try{vclean()}catch(_){}render()}
+function lock(){clearTimeout(timer);key=null;files=[];IT=[];QS=[];QRX=[];FM=[];CAL=[];UI={};DBY="";cat=null;editing=false;dr=null;pend=null;CVK="";try{const d=$("#dlg");if(d&&d.open)d.close()}catch(_){}try{vclean()}catch(_){}render()}
 function touch(){clearTimeout(timer);if(key)timer=setTimeout(lock,LK)}
 async function addFiles(list){busy=true;render();for(const f of list){const d={id:"f"+(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2)),n:f.name,t:f.type||"application/octet-stream",z:f.size,b:b64(await f.arrayBuffer()),k:cat};files.push({d,s:await seal(key,d)})}await persist();busy=false;touch();render()}
 const blobOf=f=>new Blob([unb(f.d.b)],{type:f.d.t});
@@ -171,7 +172,7 @@ async function download(f){if(!window.__dlOK||Date.now()-window.__dlOK>30000)ret
 let LP;function preview(f){LP=f;const bl=blobOf(f),u=URL.createObjectURL(bl);let h="";
 if(f.d.t.startsWith("image/"))h=`<img src="${u}" alt="">`;else if(f.d.t==="application/pdf")h=`<iframe src="${u}"></iframe>`;else h=`<p>${esc(f.d.n)}</p>`;
 const d=$("#dlg");d.innerHTML=`<div class="acts" style="justify-content:space-between;margin-bottom:10px"><b>${esc(f.d.n)}</b><span><button class="btn g s" data-a="dlp">⬇</button> <button class="btn g s" data-a="close">${t("close")}</button></span></div>${h}`;d.showModal()}
-async function exportSite(){if(!vault)return;const c=document.documentElement.cloneNode(true);c.querySelector("#vault").textContent=JSON.stringify(vault);c.querySelector("#app").innerHTML="";c.querySelector("#tabs").innerHTML="";c.querySelector("#dlg").innerHTML="";c.querySelector("#dlg").removeAttribute("open");
+async function exportSite(){if(!vault)return;const c=document.documentElement.cloneNode(true);{const pv=JSON.parse(JSON.stringify(vault));if(pv.profile){delete pv.profile.blood;delete pv.profile.ecn;delete pv.profile.ecp;if(pv.profile.edu)pv.profile.edu=pv.profile.edu.filter(e=>!e.hide)}c.querySelector("#vault").textContent=JSON.stringify(pv)}c.querySelector("#app").innerHTML="";c.querySelector("#tabs").innerHTML="";c.querySelector("#dlg").innerHTML="";c.querySelector("#dlg").removeAttribute("open");
 const html="<!DOCTYPE html>\n"+c.outerHTML,bl=new Blob([html],{type:"text/html"});
 try{const d=window.claude&&await claude.use("downloads");if(d){await d.save({filename:"antor-digital-id.html",data:bl});return}}catch(e){}
 const a=document.createElement("a");a.href=URL.createObjectURL(bl);a.download="antor-digital-id.html";document.body.appendChild(a);a.click();a.remove()}
@@ -197,7 +198,7 @@ return`<div class="glass"><div class="acts" style="justify-content:space-between
 ${files.length?files.map((f,i)=>`<div class="file"><div style="font-size:26px">${f.d.t.startsWith("image/")?"🖼️":f.d.t.includes("pdf")?"📕":"📄"}</div><div class="n">${esc(f.d.n)}<small>${(f.d.z/1024).toFixed(0)} KB${f.d.sh?" · 🔗 "+esc(f.d.sh.c||f.d.sh):""}${f.d.pub?" · 🌐":""}</small></div><div class="acts"><button class="btn g s" data-v="${i}">${t("view")}</button><button class="btn g s" data-d="${i}">${t("dl")}</button><button class="btn r s" data-x="${i}">✕</button></div></div>`).join(""):`<p>${t("empty")}</p>`}
 <p style="font-size:12px;margin-top:10px">${t("auto")}</p></div>`},
 set:()=>`<div class="glass"><h2>${t("lang")}</h2><div class="acts"><button class="btn ${L==="bn"?"":"g"}" data-l="bn">বাংলা</button><button class="btn ${L==="en"?"":"g"}" data-l="en">English</button></div></div>
-<div class="glass"><h2>${t("theme")}</h2><div class="acts"><button class="btn g" data-th="light">☀️</button><button class="btn g" data-th="dark">🌙</button></div></div>
+<div class="glass"><h2>${t("theme")}</h2><div class="acts"><button class="btn ${document.documentElement.dataset.theme==="light"?"":"g"}" data-th="light">☀️</button><button class="btn ${document.documentElement.dataset.theme==="dark"?"":"g"}" data-th="dark">🌙</button></div></div>
 ${ownOK()?`<div class="glass"><h2>${t("exp")}</h2><p>${t("expd")}</p>${vault?`<button class="btn" data-a="export" style="margin-top:8px">⬇️ ${t("exp")}</button>`:""}</div>`:""}`};
 const ownOK=()=>{try{return isOwner(au&&au.currentUser)}catch(_){return false}};
 const pr=()=>(vault&&vault.profile)||PP||{},rv=(f,k)=>pr()[f]||"";
@@ -221,12 +222,12 @@ return`<div class="glass hero big"><div class="ring"><div class="av"></div></div
 ${t("aboutv")?`<div class="glass"><h2>${t("about")}</h2><p style="white-space:pre-line">${t("aboutv")}</p></div>`:""}
 ${E.length?`<div class="glass"><h2>${t("edu")}</h2><div class="tl">${E.map(e=>`<div class="ti"><b>${esc(e.deg)}${e.hide?" 🔒":""}</b><p>${esc(e.inst)}</p><small>${esc(e.per)}</small>${e.cert?`<div><button class="btn g s" data-c="${e.id}">🔒 ${t("cert")}</button></div>`:""}</div>`).join("")}</div></div>`:""}
 ${sk.length?`<div class="glass"><h2>${t("skills").split(" (")[0]}</h2><div class="chips">${sk.map(s=>`<span>${esc(s)}</span>`).join("")}</div></div>`:""}
-${t("locv")?`<div class="glass"><h2>${t("loc")}</h2><p>📍 ${t("locv")}</p></div>`:""}${V.contact()}${soc()}${emerg()}`};
+${t("locv")?`<div class="glass"><h2>${t("loc")}</h2><p>📍 ${t("locv")}</p></div>`:""}${V.contact()}${soc()}${key?emerg():""}`};
 Object.assign(T.en,{c_pass:"Passport",c_visa:"Visa",c_nid:"National ID",c_cert:"Certificates",c_other:"Others",back:"Back"});
 Object.assign(T.bn,{c_pass:"পাসপোর্ট",c_visa:"ভিসা",c_nid:"জাতীয় পরিচয়পত্র",c_cert:"সনদ",c_other:"অন্যান্য",back:"পিছনে"});
 Object.assign(T.en,{c_license:"Driving License",c_birth:"Birth Certificate",c_bank:"Bank",c_medical:"Medical",xdate:"Expiry date",expired:"Expired",dleft:"days left"});
 Object.assign(T.bn,{c_license:"ড্রাইভিং লাইসেন্স",c_birth:"জন্মনিবন্ধন",c_bank:"ব্যাংক",c_medical:"মেডিকেল",xdate:"মেয়াদ শেষের তারিখ",expired:"মেয়াদ শেষ",dleft:"দিন বাকি"});
-const nd=f=>Math.ceil((new Date(f.d.x)-Date.now())/864e5);
+const nd=f=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(f.d.x||"");if(!m)return 9e9;const n=new Date(),t0=new Date(n.getFullYear(),n.getMonth(),n.getDate());return Math.round((new Date(+m[1],+m[2]-1,+m[3])-t0)/864e5)+0};
 const bdg=f=>{if(!f.d.x)return"";const n=nd(f);return`<b class="bg ${n<=30?"r":n<=60?"o":n<=90?"y":""}">${n<0?t("expired"):bn(n)+" "+t("dleft")}</b>`};
 const warn=()=>{const s=files.filter(f=>f.d.x&&nd(f)<=90).sort((a,b)=>nd(a)-nd(b));return s.length?`<div class="warn"><b>⏰ ${B("মেয়াদ শেষের সতর্কতা","Expiry alerts")}</b>${s.map(f=>{const n=nd(f);return`<div class="wl ${n<=30?"r":n<=60?"o":"y"}"><span>${n<0?"⛔":n<=30?"🔴":n<=60?"🟠":"🟡"} ${esc(f.d.n)}</span><b>${n<0?t("expired"):bn(n)+" "+t("dleft")}</b></div>`}).join("")}</div>`:""};
 const dx=(f,i)=>`<div class="xr"><label>${t("xdate")} <input type="date" class="ex" data-ei="${i}" value="${esc(f.d.x||"")}"></label>${bdg(f)}</div>`;
@@ -239,7 +240,11 @@ if(!cat)return`<div class="glass">${bar}${warn()}${window.gridHTML()}</div>`;
 const ls=files.map((f,i)=>[f,i]).filter(([f])=>fk(f)===cat),c=window.CCF(cat);
 return`<div class="glass">${bar}<button class="btn g s" data-cat="">← ${t("back")}</button><h1 style="margin:14px 0 4px">${c[1]} ${esc(window.CN(cat))}</h1><label class="fl"><input id="ds" placeholder="🔎 ${B("খুঁজুন","Search")}"></label><label class="btn" style="display:block;text-align:center;margin:12px 0">${busy?t("busy"):t("add")}<input id="up" type="file" multiple hidden></label><label class="btn g" style="display:block;text-align:center;margin:0 0 12px">📷 ${B("ক্যামেরায় স্ক্যান","Scan with camera")}<input id="cam" type="file" accept="image/*" capture="environment" hidden></label>${ls.length>1?`<p class="hnt">☝️ ${B("ফাইল চেপে ধরে টেনে ক্রম বদলান","Press & hold a file, then drag to reorder")}</p>`:""}${ls.length?'<div class="fls">'+ls.map(([f,i])=>`<div class="fw" data-fi="${i}"><div class="file"><div style="font-size:26px">${f.d.t.startsWith("image/")?"🖼️":f.d.t.includes("pdf")?"📕":"📄"}</div><div class="n">${esc(f.d.n)}<small>${(f.d.z/1024).toFixed(0)} KB${f.d.sh?" · 🔗 "+esc(f.d.sh.c||f.d.sh):""}${f.d.pub?" · 🌐":""}</small></div><div class="acts"><button class="btn g s" data-v="${i}">${t("view")}</button><button class="btn g s" data-d="${i}">${t("dl")}</button><button class="btn g s" data-a="pubt" data-i="${i}">🌐${f.d.pub?"✓":""}</button><button class="btn g s" data-a="shr" data-i="${i}">🔗${f.d.sh?"✓":""}</button><button class="btn r s" data-x="${i}">✕</button></div></div>${dx(f,i)}</div>`).join("")+"</div>":`<p>${t("empty")}</p>`}</div>`};Object.assign(T.en,{emg:"Emergency",blood:"Blood group",ecn:"Emergency contact name",ecp:"Emergency contact phone",links:"Links (one per line, https://…)",linkh:"Links",share:"Share profile (QR)",qrt:"Scan to open this profile",newpw:"New password",chpw:"Change vault password",done:"✓ Done"});
 Object.assign(T.bn,{emg:"জরুরি যোগাযোগ",blood:"রক্তের গ্রুপ",ecn:"জরুরি যোগাযোগের নাম",ecp:"জরুরি যোগাযোগের ফোন",links:"লিংক (এক লাইনে একটা, https://…)",linkh:"লিংক",share:"প্রোফাইল শেয়ার (QR)",qrt:"স্ক্যান করলে প্রোফাইল খুলবে",newpw:"নতুন পাসওয়ার্ড",chpw:"ভল্টের পাসওয়ার্ড বদলান",done:"✓ সম্পন্ন"});
-async function chpw(pw){const salt=crypto.getRandomValues(new Uint8Array(16)),k=await derive(pw,salt),nf=[];for(const f of files)nf.push({d:f.d,s:await seal(k,f.d)});key=k;files=nf;vault.it=await seal(k,IT);vault.qs=await seal(k,QS);vault.fm=await seal(k,FM);vault.uis=await seal(k,UI);vault.cal=await seal(k,CAL);vault.dby=await seal(k,{y:DBY});vault.salt=b64(salt);vault.check=await seal(k,{ok:1});await persist()}
+async function chpw(pw){const salt=crypto.getRandomValues(new Uint8Array(16)),k=await derive(pw,salt),nf=[];for(const f of files)nf.push({d:f.d,s:await seal(k,f.d)});
+ /* build every re-encrypted blob first; only switch the key once all of them succeeded */
+ const nv={it:await seal(k,IT),qs:await seal(k,QS),qrx:await seal(k,[...new Set(QRX||[])]),fm:await seal(k,FM),uis:await seal(k,UI||{}),cal:await seal(k,CAL),dby:await seal(k,{y:DBY}),check:await seal(k,{ok:1})};
+ if(vault.tl)nv.tl=await seal(k,await open(key,vault.tl));
+ key=k;files=nf;Object.assign(vault,nv);vault.salt=b64(salt);await persist()}
 const pwCard=()=>key?`<div class="glass"><h2>${t("chpw")}</h2><input id="np" type="password" placeholder="${t("newpw")}" autocomplete="new-password"><div class="err">${msg}</div><button class="btn" data-a="chpw">${busy?t("busy"):t("chpw")}</button></div>`:"";
 const emerg=()=>{const p=pr();if(!p.blood&&!p.ecp)return"";return`<div class="glass sos"><h2>🚨 ${t("emg")}</h2>${p.blood?row(t("blood"),`<b style="color:#ff6369;font-size:20px">${esc(p.blood)}</b>`):""}${p.ecn?row(t("ecn"),esc(p.ecn)):""}${p.ecp?`<a class="btn r" style="margin-top:10px" href="tel:${esc(p.ecp.replace(/[^\d+]/g,""))}">📞 ${esc(p.ecp)}</a>`:""}</div>`};
 const SOCK=[["wa","WhatsApp"],["fb","Facebook"],["li","LinkedIn"],["ig","Instagram"],["yt","YouTube"],["tg","Telegram"],["x","X (Twitter)"],["th","Threads"],["gh","GitHub"],["web","Website"]];
@@ -291,7 +296,7 @@ const csRows=()=>((dr&&dr.cs)||[]).map((c,i)=>`<div class="cr"><span class="si" 
 window.csForm=()=>`<div class="glass"><h2>${B("আরও অ্যাকাউন্ট","More accounts")}</h2><p class="hnt">${B("অ্যাপের নাম লিখলেই লোগো নিজে থেকে বসে যাবে","Type an app name and its logo appears automatically")}</p><datalist id="socl">${SUGN.map(n=>`<option value="${esc(n)}">`).join("")}</datalist>${csRows()}<button class="btn g" data-a="x_cadd" style="width:100%">＋ ${B("অ্যাকাউন্ট যোগ করুন","Add account")}</button></div>`;
 document.addEventListener("input",e=>{const el=e.target;if(!el||!/^cn\d+$/.test(el.id||""))return;const sp=document.getElementById("cl"+el.id.slice(2));if(sp)sp.innerHTML=window.logoFor(el.value)});
 document.addEventListener("click",e=>{const x=e.target.closest('[data-a="x_cadd"],[data-a="x_cdel"]');if(!x||!editing||!dr)return;collect();dr.cs=(dr.cs||[]).slice();if(x.dataset.a==="x_cadd")dr.cs.push({n:"",u:""});else dr.cs.splice(+x.dataset.i,1);render()});
-const bdOk=p=>+p.bd>=1&&+p.bd<=31&&+p.bm>=1&&+p.bm<=12;
+const bdOk=p=>+p.bm>=1&&+p.bm<=12&&+p.bd>=1&&+p.bd<=new Date(2024,+p.bm,0).getDate();
 const bdLine=p=>{if(!bdOk(p))return"";const m=(L==="bn"?MN_B:MN_E)[+p.bm-1];return`<p class="bdl">${fmIc("bd")} ${B("জন্মদিন","Birthday")}: <b>${nb(+p.bd)} ${m}</b>${key&&DBY?`<br><small style="color:var(--mut)">🔒 ${B("জন্ম সাল (শুধু আপনি দেখছেন)","Birth year (only you see this)")}: ${nb(DBY)}</small>`:""}</p>`};
 const bdForm=()=>`<label class="fl">${fmIc("bd")} ${B("জন্মদিন (দিন ও মাস সবাই দেখবে)","Birthday (day & month are public)")}</label><div style="display:flex;gap:8px"><label class="fl" style="flex:1">${B("দিন","Day")}<select id="f_bd"><option value=""></option>${Array.from({length:31},(_,i)=>`<option value="${i+1}"${+dr.bd===i+1?" selected":""}>${nb(i+1)}</option>`).join("")}</select></label><label class="fl" style="flex:2">${B("মাস","Month")}<select id="f_bm"><option value=""></option>${(L==="bn"?MN_B:MN_E).map((n,i)=>`<option value="${i+1}"${+dr.bm===i+1?" selected":""}>${n}</option>`).join("")}</select></label></div><label class="fl">🔒 ${B("জন্ম সাল (লক থাকবে, শুধু আপনি ভল্ট খুললে দেখবেন)","Birth year (locked, only you see it when unlocked)")}<input id="f_by" inputmode="numeric" maxlength="4" value="${esc(dr.by||"")}" placeholder="1995"></label>`;
 const ownOn=()=>{try{if(key)return true}catch(_){}try{if(ownerNow())return true}catch(_){}try{return localStorage.getItem("own")==="1"}catch(_){return false}};
@@ -304,7 +309,7 @@ let H12=true;try{H12=localStorage.getItem("h12")!=="0"}catch(_){}
 const _s3=V.set;V.set=()=>_s3()+`<div class="glass"><h2>${t("clk12")}</h2><div class="acts"><button class="btn ${H12?"":"g"}" data-h="1">12h · AM/PM</button><button class="btn ${H12?"g":""}" data-h="0">24h</button></div></div>`;
 const lk='<rect x="5" y="11" width="14" height="10" rx="3"/><path d="M8 11V8a4 4 0 018 0v3"/>',fl='<path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/>';
 const EI={"🔒":lk,"🔐":lk,"🔓":'<rect x="5" y="11" width="14" height="10" rx="3"/><path d="M8 11V8a4 4 0 017.5-2"/>',"🛡":'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',"📞":'<path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z"/>',"✉":'<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 8l9 6 9-6"/>',"✏":'<path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/>',"🔑":'<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/>',"📷":'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',"📎":'<path d="M20 11l-8 8a5 5 0 01-7-7l8-8a3.5 3.5 0 015 5l-8 8a2 2 0 01-3-3l7-7"/>',"💾":'<path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/>',"⏰":'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M5 4L3 6M19 4l2 2"/>',"🚨":'<path d="M12 3L2 20h20z"/><path d="M12 10v4M12 17v.5"/>',"🔗":'<path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/>',"📍":'<path d="M12 21s7-6 7-12a7 7 0 10-14 0c0 6 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/>',"⬇":'<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>',"🖼":'<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.7"/><path d="M4 18l5-5 4 4 3-3 4 4"/>',"📕":fl,"📄":fl,"📁":'<path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>',"🛂":'<rect x="5" y="3" width="14" height="18" rx="2.5"/><circle cx="12" cy="11" r="3.5"/><path d="M9 17h6"/>',"✈":'<path d="M21 3L3 11l7 3 3 7z"/><path d="M10 14l11-11"/>',"🪪":'<rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.5-2 5.5-2 6 0M14 10h4M14 14h3"/>',"🎓":'<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2.5 9 2.5 12 0v-5"/>',"🚗":'<path d="M4 16v-4l2-5h12l2 5v4zM4 16v2M20 16v2"/><circle cx="8" cy="14" r="1"/><circle cx="16" cy="14" r="1"/>',"🏦":'<path d="M3 10l9-6 9 6zM5 10v8M10 10v8M14 10v8M19 10v8M3 20h18"/>',"🏥":'<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/>',"☀":'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/>',"🌙":'<path d="M20 14A8 8 0 019 4a8 8 0 1011 10z"/>'};
-const ico=h=>h.replace(/(<[^>]*>)|([\u2300-\u27BF\u2B00-\u2BFF]|[\u{1F300}-\u{1FAFF}])\uFE0F?/gu,(m,tg,c)=>tg?tg:(EI[c]?`<i class="ei">${S(EI[c])}</i>`:m));
+const ico=h=>h.replace(/(<textarea[\s\S]*?<\/textarea>|<option[\s\S]*?<\/option>|<[^>]*>)|([\u2300-\u27BF\u2B00-\u2BFF]|[\u{1F300}-\u{1FAFF}])\uFE0F?/gu,(m,tg,c)=>tg?tg:(EI[c]?`<i class="ei">${S(EI[c])}</i>`:m));
 function render(){const keep=document.activeElement&&document.activeElement.id;{const A=$("#app"),h=ico(V[tab]()),nt=window.__lt!==tab;if(nt||window.__lh!==h){A.classList.toggle("anim",nt);A.innerHTML=h;window.__lh=h;window.__lt=tab}}setTimeout(()=>tick(),0);
 const tb=[["home","🏠"],["profile","👤"],["docs","🔐"],["find","🔎"],["cal","📅"],["set","⚙️"]].filter(([k])=>!["docs","find","cal"].includes(k)||ownOn());
 $("#tabs").innerHTML=tb.map(([k,i])=>`<button data-tab="${k}" class="${tab===k?"on":""}"><i>${SV[k]}</i>${t(k)}</button>`).join("");
@@ -323,7 +328,7 @@ else if(D.a==="cancel"){editing=false;render()}
 else if(D.a==="save"){collect();{const{by:_by,...pp}=dr;vault.profile={...pp,edu:dr.edu.filter(e=>e.deg||e.inst),cs:(dr.cs||[]).filter(c=>c.n&&c.u)};DBY=_by||"";vault.dby=await seal(key,{y:DBY})}vault.pts=Date.now();await persist();editing=false;scrollTo(0,0);render();pubp(true);profPush()}
 else if(D.tab){tab=D.tab;msg="";scrollTo(0,0);render()}
 else if(D.l){L=D.l;try{localStorage.setItem("l",L)}catch(_){}render()}
-else if(D.th){document.documentElement.dataset.theme=D.th}
+else if(D.th){document.documentElement.dataset.theme=D.th;try{localStorage.setItem("th",D.th)}catch(_){}render()}
 else if(D.v!==undefined)preview(files[D.v]);
 else if(D.d!==undefined)download(files[D.d]);
 else if(D.x!==undefined){if(confirm(t("confirm"))){const f=files[+D.x];if(f)await markDeleted("files",await fileKey(f.d));files.splice(+D.x,1);await persist();render()}}
@@ -337,6 +342,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id&&e.targe
 const tick=()=>{const c=$("#clk");if(!c)return;const d=new Date(),l=L==="bn"?"bn-BD":"en-GB";c.textContent=new Intl.DateTimeFormat(l,{hour:"numeric",minute:"2-digit",hour12:H12}).formatToParts(d).map(x=>x.type==="hour"?x.value.replace(/^[0\u09E6]+(?=[\d\u09E6-\u09EF])/,""):x.value).join("");$("#dt").textContent=d.toLocaleDateString(l,{weekday:"short",day:"numeric",month:"short"})};document.addEventListener("change",async e=>{const x=e.target;if(x.dataset.ei===undefined||!key)return;const f=files[+x.dataset.ei];f.d.x=x.value;f.s=await seal(key,f.d);await persist();render()});
 setInterval(tick,1000);
 try{const a=localStorage.getItem("ac");if(a)ap(+a)}catch(_){}
+try{const th=localStorage.getItem("th");if(th)document.documentElement.dataset.theme=th}catch(_){}
 document.addEventListener("change",async e=>{const x=e.target,f=x.files&&x.files[0];if(!f||!key||!dr)return;
 if(x.id==="ph"){collect();const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const c=document.createElement("canvas");c.width=c.height=320;const m=Math.min(im.width,im.height);c.getContext("2d").drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,320,320);dr.photo=c.toDataURL("image/jpeg",.82);render()};im.src=r.result};r.readAsDataURL(f)}
 else if(x.classList.contains("cf")){collect();const ed=dr.edu[+x.dataset.e];for(const old of files.filter(q=>q.d.e===ed.id))await markDeleted("files",await fileKey(old.d));files=files.filter(q=>q.d.e!==ed.id);const d={id:"f"+(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2)),n:f.name,t:f.type||"application/octet-stream",z:f.size,b:b64(await f.arrayBuffer()),e:ed.id};files.push({d,s:await seal(key,d)});ed.cert=true;await persist();render()}});
@@ -433,7 +439,7 @@ const big=f=>f.d.z>3e7&&(alert(B("৩০ MB-এর বেশি নয়","Max 
 async function pubt(i){const f=files[i];await W(async()=>{try{if(!fbOn())return;await login();if(f.d.pub){const P=f.d.pub;await wipe(db.collection("pubfiles").doc(P.id||P),P.n||0);delete f.d.pub}else{if(big(f))return;const id="p"+Date.now(),r=db.collection("pubfiles").doc(id),n=await put(r,f.d.b);await r.set({n:f.d.n,t:f.d.t,c:n,k:f.d.k||"other"});f.d.pub={id,n}}f.s=await seal(key,f.d);await persist();render()}catch(e){alert(e.message)}})}
 async function shr(i){const f=files[i];await W(async()=>{try{if(!fbOn())return;await login();if(f.d.sh){const c=f.d.sh;await wipe(db.collection("shares").doc(await sha(c.c||c)),c.n||0);delete f.d.sh}else{if(big(f))return;const c=[...crypto.getRandomValues(new Uint8Array(10))].map(x=>"abcdefghjkmnpqrstuvwxyz23456789"[x%31]).join(""),k=await shk(c),iv=crypto.getRandomValues(new Uint8Array(12)),ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},k,unb(f.d.b)),r=db.collection("shares").doc(await sha(c)),n=await put(r,b64(ct));await r.set({m:await seal(k,{n:f.d.n,t:f.d.t}),iv:b64(iv),c:n});f.d.sh={c,n};prompt(B("কোড/লিংক কপি করুন","Copy code/link"),location.origin+location.pathname+"?c="+c)}f.s=await seal(key,f.d);await persist();render()}catch(e){alert(e.message)}})}
 async function getc(c){c=(typeof c==="string"?c:g("sc")).trim();if(!c||!fbOn())return;await W(async()=>{try{const r=db.collection("shares").doc(await sha(c)),m=await r.get();if(!m.exists)return alert(B("কোড ভুল বা বন্ধ করা হয়েছে","Invalid or revoked code"));const D=m.data(),k=await shk(c),{n,t}=await open(k,D.m),pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb(D.iv)},k,unb(await take(r,D.c)));preview({d:{n,t,b:b64(pt)}})}catch(e){alert(e.message)}})}
-async function pubp(sl){try{if(!fbOn())return;if(sl&&!isOwner(au.currentUser))return;await login();const p={...pr()};["blood","ecn","ecp"].forEach(k=>delete p[k]);if(p.edu)p.edu=p.edu.filter(e=>!e.hide).map(({hide,...r})=>r);await db.collection("pub").doc("profile").set(p);if(!sl)alert("✓")}catch(e){if(!sl)alert(e.message)}}
+async function pubp(sl){try{if(!fbOn())return;if(sl&&!isOwner(au.currentUser))return;await login();const p={...pr()};["blood","ecn","ecp"].forEach(k=>delete p[k]);if(p.edu)p.edu=p.edu.filter(e=>!e.hide).map(({hide,...r})=>r);if(JSON.stringify(p).length>900000)delete p.cover;await db.collection("pub").doc("profile").set(p);if(!sl)alert("✓")}catch(e){if(!sl)alert(e.message)}}
 const fnd=q=>{q=(q||"").toLowerCase();const a=IT.map((x,i)=>[x,i]).filter(([x])=>(x.n+" "+x.p+" "+x.t).toLowerCase().includes(q));return a.length?a.map(([x,i])=>`<div class="file"><div style="font-size:24px">📍</div><div class="n" style="white-space:normal">${esc(x.n)}<small>📌 ${esc(x.p)}${x.t?" · "+esc(x.t):""}</small></div><button class="btn r s" data-a="deli" data-i="${i}">✕</button></div>`).join(""):`<p>${B("কিছু পাওয়া যায়নি","Nothing found")}</p>`};
 T.en.find="Finder";T.bn.find="কোথায়";SV.find=S('<circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/>');
 V.find=()=>{if(!key)return V.docs();return`<div class="glass"><label class="fl">🔎<input id="q" placeholder="${B("কোন জিনিস খুঁজছেন?","Search an item")}"></label><div id="il">${fnd("")}</div></div><div class="glass"><h2>${B("নতুন জিনিস","New item")}</h2>${inp("i_n",B("জিনিসের নাম","Item"),"")}${inp("i_p",B("কোথায় রেখেছেন","Where it is"),"")}${inp("i_t",B("নোট (ঐচ্ছিক)","Note"),"")}<button class="btn" data-a="addi">${B("সেভ","Save")}</button></div>`};
@@ -784,7 +790,7 @@ const _hh=V.home;V.home=()=>(key?warn():"")+_hh();
 async function bk(){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(vault)],{type:"application/json"}));a.download="antor-backup.json";document.body.appendChild(a);a.click();a.remove();try{localStorage.setItem("lbk",Date.now())}catch(_){}try{render()}catch(_){}}
 const _s4=V.set;V.set=()=>_s4()+(vault?`${ownOK()?`<div class="glass"><h2>💾 ${B("ব্যাকআপ","Backup")}</h2><p>${B("এনক্রিপ্টেড ব্যাকআপ ফাইল (পাসওয়ার্ড ছাড়া খোলা যায় না)।","Encrypted backup file (useless without your password).")}</p><div class="acts"><button class="btn" data-a="bk">⬇ ${B("ব্যাকআপ","Backup")}</button><label class="btn g">⬆ ${B("রিস্টোর","Restore")}<input id="rs" type="file" accept=".json" hidden></label></div></div>`:""}<div class="glass"><h2>⏱ ${B("অটো-লক","Auto-lock")}</h2><div class="acts">${[1,2,5,15].map(m=>`<button class="btn s ${LK===m*6e4?"":"g"}" data-a="lk" data-i="${m}">${bn(m)} ${B("মিনিট","min")}</button>`).join("")}</div></div>`:"");
 document.addEventListener("input",e=>{if(e.target.id!=="ds")return;const v=e.target.value.toLowerCase();document.querySelectorAll(".file").forEach(r=>{const h=!r.textContent.toLowerCase().includes(v),n=r.nextElementSibling;r.style.display=h?"none":"";if(n&&n.classList.contains("xr"))n.style.display=h?"none":""})});
-document.addEventListener("change",async e=>{const x=e.target;if(x.id!=="rs"||!x.files[0])return;try{const v=JSON.parse(await x.files[0].text());if(!v.salt||!v.check)throw 0;if(!confirm(B("বর্তমান ভল্ট বদলে যাবে। চালিয়ে যাবেন?","This replaces the current vault. Continue?")))return;vault=v;await dbSet(v);key=null;files=[];IT=[];render()}catch(_){alert(B("ব্যাকআপ ফাইল ঠিক নয়","Invalid backup file"))}});
+document.addEventListener("change",async e=>{const x=e.target;if(x.id!=="rs"||!x.files[0])return;try{const v=JSON.parse(await x.files[0].text());if(!v.salt||!v.check)throw 0;if(!confirm(B("বর্তমান ভল্ট বদলে যাবে। চালিয়ে যাবেন?","This replaces the current vault. Continue?")))return;v.ts=Math.max(Date.now(),(v.ts||0)+1);if(v.profile)v.pts=Date.now();try{if(db&&isOwner(au&&au.currentUser)){const m0=await db.collection("vault").doc("main").get();if(m0.exists){v.sy=m0.data().t||0;v.rev=m0.data().rev||0}}}catch(_){}vault=v;await dbSet(v);key=null;files=[];IT=[];QS=[];QRX=[];FM=[];CAL=[];UI={};DBY="";cat=null;x.value="";render()}catch(_){x.value="";alert(B("ব্যাকআপ ফাইল ঠিক নয়","Invalid backup file"))}});
 let QS=[],QRX=[],CVK="";
 const rnd=n=>[...crypto.getRandomValues(new Uint8Array(n))].map(x=>"abcdefghjkmnpqrstuvwxyz23456789"[x%31]).join("");
 const saveQS=async()=>{vault.qs=await seal(key,QS);vault.qrx=await seal(key,[...new Set(QRX)]);await persist()};
@@ -894,12 +900,16 @@ async function shrink(f){
  const bl=await new Promise(r=>c.toBlob(r,"image/jpeg",.85));
  if(!bl||(sc===1&&bl.size>=f.size))return{blob:f,th:await mkThumb(f)};
  return{blob:bl,th:await mkThumb(bl),conv:true}}
-addFiles=async function(list){busy=true;render();
- for(const f of list){let blob=f,type=f.type||"application/octet-stream",name=f.name,th;
+addFiles=async function(list){if(!key)return;busy=true;render();
+ try{
+ for(const f of list){if(f.size>4e7){alert(B("৪০ MB-এর বেশি ফাইল যোগ করা যায় না: ","Files over 40 MB can't be added: ")+f.name);continue}
+  let blob=f,type=f.type||"application/octet-stream",name=f.name,th;
   if(type.startsWith("image/")&&type!=="image/gif"&&type!=="image/svg+xml"){try{const r=await shrink(f);blob=r.blob;th=r.th;if(r.conv){type="image/jpeg";name=name.replace(/\.[^.]+$/,"")+".jpg"}}catch(_){}}
   const d={id:"f"+(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2)),n:name,t:type,z:blob.size,b:b64(await blob.arrayBuffer()),k:cat};if(th)d.th=th;
   files.push({d,s:await seal(key,d)})}
- await persist();busy=false;touch();render();setTimeout(bgThumbs,300)};
+ await persist()
+ }catch(e){alert(B("ফাইল সেভ করা যায়নি (জায়গা কম হতে পারে): ","Could not save the file (storage may be full): ")+(e&&e.message||e))}
+ finally{busy=false;touch();render();setTimeout(bgThumbs,300)}};
 
 /* ---------- pdf.js (loaded only when a PDF is opened) ---------- */
 let PJ;const PV="3.11.174",PB="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/"+PV+"/";
@@ -909,7 +919,7 @@ let TB=0;
 async function bgThumbs(){if(TB||!key)return;TB=1;const k0=key;let ch=0;
  try{for(const f of files.slice()){if(key!==k0)break;if(f.d.th!==undefined)continue;const t=f.d.t||"";const pdf=t==="application/pdf";if(!pdf&&!t.startsWith("image/"))continue;
   try{await ldB(f.d);f.d.th=pdf?await pdfThumb(f):await mkThumb(blobOf(f))}catch(_){if(!pdf)f.d.th="";else{evict(f.d);continue}}
-  if(key!==k0)break;f.s=await seal(key,f.d);evict(f.d);ch++;decorate();await new Promise(r=>setTimeout(r,40))}
+  if(key!==k0)break;const ns=await seal(key,f.d);if(key!==k0)break;f.s=ns;evict(f.d);ch++;decorate();await new Promise(r=>setTimeout(r,40))}
   if(ch&&key===k0)await persist()}catch(_){}TB=0}
 
 /* ---------- list rows: show the real photo / PDF first page ---------- */
@@ -985,9 +995,10 @@ async function loadVaultState(v){
 }
 async function pullFrom(r,m){const v=JSON.parse(await take2(r,m.data()));v.sy=m.data().t||0;v.ts=v.sy;v.rev=m.data().rev||0;await loadVaultState(v);CS="ok";SYE="";LSY=Date.now();if(!(editing||busy))render();if(key)setTimeout(bgThumbs,600)};
 async function syncCycle(){
- if(!owner()||!vault)return;if(SB){SP=1;return}SB=1;
+ if(!owner())return;if(SB){SP=1;return}SB=1;
  try{
   const r=db.collection("vault").doc("main");let done=false;
+  if(!vault){const s0=await r.get();if(s0.exists)await pullFrom(r,s0);return}
   for(let attempt=0;attempt<5&&!done;attempt++){
    const snap=await r.get(),meta=snap.exists?snap.data():{},remoteT=meta.t||0,localSy=vault.sy||0,localTs=vault.ts||0;
    if(snap.exists&&remoteT>localSy){
@@ -1069,6 +1080,8 @@ document.addEventListener("click",e=>{const x=e.target.closest('[data-a="cvok"],
  if(x.dataset.a==="cvok"&&CR&&dr){const W=1200,H=1000,k=W/CR.fw,s=CR.mn*CR.z,c=document.createElement("canvas");c.width=W;c.height=H;c.getContext("2d").drawImage(CR.bm,CR.ox*k,CR.oy*k,CR.bm.width*s*k,CR.bm.height*s*k);dr.cover=c.toDataURL("image/jpeg",.82)}
  CR=null;$("#dlg").close();render()});
 document.addEventListener("click",e=>{const x=e.target.closest('[data-a="cvx"]');if(!x||!dr)return;collect();dr.cover="";render()});
+/* these live inside this closure but are called from the first script: publish them */
+Object.assign(window,{markDeleted,fileKey,itemKey,profPush,vclean,pullFrom});
 })();
 </script><script>
 /* ---------- biometric auto-prompt on the locked Documents screen + download guard ---------- */
@@ -1171,7 +1184,7 @@ document.addEventListener("click",e=>{const x=e.target.closest('[data-a="cvx"]')
   if(r>1040)alert(B("লেখা বেশি, এক পেজে ধরেনি — কিছু কমান","Too much text for one page — shorten it"));
   const bl=await new Promise(r=>c.toBlob(r,"image/jpeg",.92));return pdfOf(new Uint8Array(await bl.arrayBuffer()),c.width,c.height)};
  const cvSave=async T=>{const bt=document.querySelector('[data-a="x_t_cvs"]');if(bt)bt.textContent="…";const o=cvGrab(CVG(T));T.cv=o;await tlSave();
-  const bl=await cvPdf(o),n=(o.name||"CV").trim().replace(/\s+/g,"_")+"_CV.pdf";window.__cvB=bl;window.__cvN=n;
+  const bl=await cvPdf(o),n=(o.name&&o.name.trim()?o.name.trim().replace(/\s+/g,"_")+"_CV":"CV")+".pdf";window.__cvB=bl;window.__cvN=n;
   win("✅ "+B("সিভি PDF তৈরি","CV PDF ready"),`<p style="text-align:center;word-break:break-all">${esc(n)} · ${Math.round(bl.size/1024)} KB</p><div class="acts" style="justify-content:center;gap:10px"><button class="btn" data-a="x_t_cvd">⬇ ${B("ডাউনলোড","Download")}</button><button class="btn g" data-a="x_t_cvh">${B("শেয়ার","Share")}</button><button class="btn g" data-a="x_t_cvo">${B("খুলুন","Open")}</button></div><p class="hnt">${B("ডাউনলোড না হলে 'খুলুন' বা 'শেয়ার' চাপুন, তারপর সেভ করুন।","If Download does nothing, use Open or Share, then save.")}</p>`)};
  const cvAct=async a=>{const b=window.__cvB,n=window.__cvN;if(!b)return;const f=new File([b],n,{type:"application/pdf"});
   if(a==="cvd"){const l=document.createElement("a");l.href=URL.createObjectURL(b);l.download=n;document.body.appendChild(l);l.click();l.remove()}
@@ -1188,6 +1201,39 @@ document.addEventListener("click",async e=>{const x=e.target.closest&&e.target.c
   else if(a==="pd"){T.p.splice(i,1);await tlSave();await vPw()}
   else if(a==="pc"){try{await navigator.clipboard.writeText(T.p[i].s||"");x.textContent="✓"}catch(_){}}}catch(er){alert(er.message||er)}});
  const st=document.createElement("style");st.textContent="@media print{body>*:not(#dlg){display:none!important}#dlg{position:static!important;box-shadow:none!important;background:#fff!important;color:#000!important}#dlg .acts{display:none!important}}";document.head.appendChild(st);
+})();
+</script>
+<script>
+/* ===== v2 extras: rename files, lock-when-away, storage card, Enter in dialogs ===== */
+(function(){
+ /* rename a file */
+ const _r=render;
+ render=function(){_r.apply(this,arguments);try{
+  if(!key)return;
+  document.querySelectorAll("#app .file").forEach(r=>{const a=r.querySelector(".acts"),b=a&&a.querySelector("[data-v]");
+   if(!b||a.querySelector('[data-a="x_ren"]'))return;
+   a.insertAdjacentHTML("afterbegin",'<button class="btn g s" data-a="x_ren" data-i="'+b.dataset.v+'">\u270E</button>')})
+ }catch(_){}};
+ document.addEventListener("click",async e=>{const x=e.target.closest&&e.target.closest('[data-a="x_ren"]');if(!x||!key)return;
+  const f=files[+x.dataset.i];if(!f)return;
+  const n=prompt(B("নতুন নাম","New name"),f.d.n);if(n===null)return;const v=n.trim();if(!v||v===f.d.n)return;
+  f.d.n=v;f.s=await seal(key,f.d);await persist();render()});
+ /* lock when the app was left for over a minute (short trips to the camera / file picker are fine) */
+ const lbg=()=>{try{return localStorage.getItem("lbg")==="1"}catch(_){return false}};
+ let away=0;
+ document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="hidden"){away=Date.now()}
+  else if(away&&lbg()&&key&&Date.now()-away>60000){away=0;lock()}else away=0});
+ document.addEventListener("click",e=>{const x=e.target.closest&&e.target.closest('[data-a="x_lbg"]');if(!x)return;
+  try{localStorage.setItem("lbg",lbg()?"0":"1")}catch(_){}render()});
+ /* storage card */
+ const _s=V.set;
+ V.set=()=>{const h=_s();if(!key)return h;
+  const tot=files.reduce((a,f)=>a+(f.d.z||0),0),mb=(tot/1048576).toFixed(1);
+  return h+`<div class="glass"><h2>${B("ভল্ট স্টোরেজ","Vault storage")}</h2><p>${B("ফাইল","Files")}: <b>${files.length}</b> · ${mb} MB</p></div><div class="glass"><h2>${B("ব্যাকগ্রাউন্ডে অটো-লক","Lock when away")}</h2><p>${B("অ্যাপ ১ মিনিটের বেশি বন্ধ বা ব্যাকগ্রাউন্ডে থাকলে ভল্ট লক হবে।","Locks the vault if the app was away for over 1 minute.")}</p><button class="btn ${lbg()?"":"g"}" data-a="x_lbg">${lbg()?"ON ✓":"OFF"}</button></div>`};
+ /* Enter key in the QR / biometric password dialogs */
+ document.addEventListener("keydown",e=>{if(e.key!=="Enter"||!e.target)return;
+  const m={qg_pw:"x_qgo",bio_pw:"x_bioon"}[e.target.id];if(m){const b=document.querySelector('[data-a="'+m+'"]');if(b)b.click()}});
 })();
 </script>
 </body></html>
