@@ -1078,7 +1078,7 @@ document.addEventListener("click",e=>{const x=e.target.closest('[data-a="cvx"]')
  render=function(){
   const out=_r.apply(this,arguments);
   try{
-   const lockedDocs=tab==="docs"&&vault&&!key&&bioSup()&&bioOn();
+   const lockedDocs=tab==="docs"&&vault&&!key&&!!(window.PublicKeyCredential&&window.isSecureContext&&localStorage.getItem("bio"));
    if(lockedDocs){
     if(!tried){tried=true;setTimeout(()=>{try{const d=document.getElementById("dlg");if(key||tab!=="docs"||(d&&d.open)||document.visibilityState!=="visible")return;const b=document.querySelector('[data-a="x_bio"]');if(b){window.__bioAuto=1;b.click()}}catch(_){}},400)}
    }else tried=false;
@@ -1170,12 +1170,17 @@ document.addEventListener("click",e=>{const x=e.target.closest('[data-a="cvx"]')
   let f=1,r;while((r=paint(f))>1030&&f>.71)f-=.05;
   if(r>1040)alert(B("লেখা বেশি, এক পেজে ধরেনি — কিছু কমান","Too much text for one page — shorten it"));
   const bl=await new Promise(r=>c.toBlob(r,"image/jpeg",.92));return pdfOf(new Uint8Array(await bl.arrayBuffer()),c.width,c.height)};
- const cvSave=async T=>{const o=cvGrab(CVG(T));T.cv=o;await tlSave();
-  const bl=await cvPdf(o),a=document.createElement("a");a.href=URL.createObjectURL(bl);a.download=(o.name||"CV").trim().replace(/\s+/g,"_")+"_CV.pdf";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),6e4)};
+ const cvSave=async T=>{const bt=document.querySelector('[data-a="x_t_cvs"]');if(bt)bt.textContent="…";const o=cvGrab(CVG(T));T.cv=o;await tlSave();
+  const bl=await cvPdf(o),n=(o.name||"CV").trim().replace(/\s+/g,"_")+"_CV.pdf";window.__cvB=bl;window.__cvN=n;
+  win("✅ "+B("সিভি PDF তৈরি","CV PDF ready"),`<p style="text-align:center;word-break:break-all">${esc(n)} · ${Math.round(bl.size/1024)} KB</p><div class="acts" style="justify-content:center;gap:10px"><button class="btn" data-a="x_t_cvd">⬇ ${B("ডাউনলোড","Download")}</button><button class="btn g" data-a="x_t_cvh">${B("শেয়ার","Share")}</button><button class="btn g" data-a="x_t_cvo">${B("খুলুন","Open")}</button></div><p class="hnt">${B("ডাউনলোড না হলে 'খুলুন' বা 'শেয়ার' চাপুন, তারপর সেভ করুন।","If Download does nothing, use Open or Share, then save.")}</p>`)};
+ const cvAct=async a=>{const b=window.__cvB,n=window.__cvN;if(!b)return;const f=new File([b],n,{type:"application/pdf"});
+  if(a==="cvd"){const l=document.createElement("a");l.href=URL.createObjectURL(b);l.download=n;document.body.appendChild(l);l.click();l.remove()}
+  else if(a==="cvh"){try{if(navigator.canShare&&navigator.canShare({files:[f]}))await navigator.share({files:[f],title:n});else alert(B("এই ব্রাউজারে শেয়ার চলে না — ডাউনলোড বা খুলুন চাপুন","Sharing isn't supported here — use Download or Open"))}catch(_){}}
+  else{const u=URL.createObjectURL(b);if(!window.open(u,"_blank"))location.href=u}};
  document.addEventListener("change",async e=>{if(!e.target||e.target.id!=="cm_ph"||!key)return;const fl=e.target.files[0];if(!fl)return;try{const T=await tlLoad(),b=await createImageBitmap(fl),k=Math.min(1,500/Math.max(b.width,b.height)),c=document.createElement("canvas");c.width=Math.round(b.width*k);c.height=Math.round(b.height*k);c.getContext("2d").drawImage(b,0,0,c.width,c.height);T.cv=cvGrab(Object.assign(CVG(T),{photo:c.toDataURL("image/jpeg",.85)}));await tlSave();await vCv(T)}catch(er){alert(er.message||er)}});
  {const s2=document.createElement("style");s2.textContent="#dlg textarea{width:100%;box-sizing:border-box;font:inherit;padding:10px;border-radius:12px;border:1px solid rgba(128,128,128,.35);background:transparent;color:inherit;resize:vertical}";document.head.appendChild(s2)}
 document.addEventListener("click",async e=>{const x=e.target.closest&&e.target.closest('[data-a^="x_t_"]');if(!x)return;const a=x.dataset.a.slice(4),i=+x.dataset.i;
-  if(a==="vcf")return vcf();if(a==="print")return print();if(!key)return;const T=await tlLoad();
+  if(a==="cvd"||a==="cvh"||a==="cvo")return cvAct(a);if(a==="vcf")return vcf();if(a==="print")return print();if(!key)return;const T=await tlLoad();
   try{if(a==="rem")await vRem();else if(a==="pw")await vPw();else if(a==="log")await vLog();else if(a==="cv")await vCv(T);else if(a==="cvs")await cvSave(T);else if(a==="id")vId();else if(a==="scan")vScan();
   else if(a==="ra"){const n=g("rn").trim(),d=g("rd");if(!n||!d)return;T.r.push({n,d,k:g("rk")});await tlSave();await vRem();render()}
   else if(a==="rd"){T.r.splice(i,1);await tlSave();await vRem();render()}
